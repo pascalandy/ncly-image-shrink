@@ -155,6 +155,19 @@ exec bin/imageproof match trns-3-8-2.png trns-3-8-2.shrunk.png
 rm trns-3-8-2.shrunk.png
 ncly image shrink trns-3-8-2.png --max-side 31 --json
 exec bin/imageproof match trns-3-8-2.png trns-3-8-2.shrunk.png 31
+# spec: input-invalid alpha
+exec bin/imageproof invalid-trns trns-0-8-2.png invalid-trns-0.png
+protect invalid-trns-0.png invalid-trns-0.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink invalid-trns-0.png
+exec bin/imageproof invalid-trns trns-2-8-2.png invalid-trns-2.png
+protect invalid-trns-2.png invalid-trns-2.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink invalid-trns-2.png
+exec bin/imageproof invalid-trns trns-3-8-2.png invalid-trns-3.png
+protect invalid-trns-3.png invalid-trns-3.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink invalid-trns-3.png
+! exec bin/imageproof match invalid-trns-3.png trns-3-8-2.shrunk.png 31
+stderr 'invalid PNG transparency'
+
 # R1-F3: complete high-frequency footprints, including fractional edges.
 # spec: pixels alpha depth orientation profile
 exec bin/imageproof frequency-fixture stripes.png 256 128 1 8 opaque
@@ -442,6 +455,22 @@ exec bin/imageproof match webp-orientation-7.webp webp-orientation-7.shrunk.webp
 ncly image shrink webp-orientation-8.webp --json
 exec bin/imageproof match webp-orientation-8.webp webp-orientation-8.shrunk.webp
 
+# Full-footprint references also judge lossy JPEG/WebP reductions.
+# spec: pixels geometry profile privacy
+exec vips copy stripes.png 'frequency.jpg[Q=100,keep=icc,subsample_mode=off]'
+exec bin/imageproof pad-jpeg frequency.jpg
+exec vips copy stripes.png 'frequency.webp[lossless,keep=icc]'
+exec bin/imageproof private-webp frequency.webp
+exec bin/imageproof wrong-pixels stripes.shrunk.png wrong-frequency.png black
+ncly image shrink frequency.jpg --max-side 64 --json
+exec bin/imageproof match frequency.jpg frequency.shrunk.jpg 64
+exec vips copy wrong-frequency.png 'wrong-frequency.jpg[keep=icc]'
+reads frequency.shrunk.jpg reference wrong-frequency.jpg bin/imageproof match frequency.jpg '{}' 64
+ncly image shrink frequency.webp --max-side 64 --json
+exec bin/imageproof match frequency.webp frequency.shrunk.webp 64
+exec vips copy wrong-frequency.png 'wrong-frequency.webp[keep=icc]'
+reads frequency.shrunk.webp reference wrong-frequency.webp bin/imageproof match frequency.webp '{}' 64
+
 # R2-F2: a declared empty profile differs from no declaration.
 # spec: input-invalid profile
 exec bin/imageproof empty-profiles
@@ -457,6 +486,40 @@ protect empty-icc.webp empty-icc.shrunk.webp
 refuses IMAGE_SHRINK_INPUT ncly image shrink empty-icc.webp
 ! exec bin/imageproof match empty-icc.webp photo.shrunk.webp
 stderr 'invalid declared ICC'
+
+# ICC declaration envelopes include legal multipart reordering.
+# spec: profile input-invalid pixels
+exec bin/imageproof profile-envelopes
+ncly image shrink profile-jpeg-ordered.jpg --json
+exec bin/imageproof match profile-jpeg-ordered.jpg profile-jpeg-ordered.shrunk.jpg
+ncly image shrink profile-jpeg-reverse.jpg --json
+exec bin/imageproof match profile-jpeg-reverse.jpg profile-jpeg-reverse.shrunk.jpg
+protect profile-png-name-long.png profile-png-name-long.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-png-name-long.png
+protect profile-png-method.png profile-png-method.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-png-method.png
+protect profile-png-duplicate.png profile-png-duplicate.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-png-duplicate.png
+protect profile-jpeg-missing.jpg profile-jpeg-missing.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-jpeg-missing.jpg
+protect profile-jpeg-duplicate.jpg profile-jpeg-duplicate.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-jpeg-duplicate.jpg
+protect profile-jpeg-total.jpg profile-jpeg-total.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-jpeg-total.jpg
+protect profile-jpeg-zero-number.jpg profile-jpeg-zero-number.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-jpeg-zero-number.jpg
+protect profile-jpeg-zero-total.jpg profile-jpeg-zero-total.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-jpeg-zero-total.jpg
+protect profile-jpeg-short.jpg profile-jpeg-short.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-jpeg-short.jpg
+protect profile-webp-flag-off.webp profile-webp-flag-off.shrunk.webp
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-webp-flag-off.webp
+protect profile-webp-chunk-missing.webp profile-webp-chunk-missing.shrunk.webp
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-webp-chunk-missing.webp
+protect profile-webp-duplicate.webp profile-webp-duplicate.shrunk.webp
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-webp-duplicate.webp
+protect profile-webp-no-header.webp profile-webp-no-header.shrunk.webp
+refuses IMAGE_SHRINK_INPUT ncly image shrink profile-webp-no-header.webp
 
 # R1-F4: genuine multi-image files and every multipart classifier.
 # spec: multipart format
@@ -962,9 +1025,14 @@ func makeJPEG(name string, orientation int) {
 }
 func metadataOf(b []byte, format string) ([]byte, bool) {
 	var profile []byte
+	declared := false
+	model := "RGB "
 	sensitive := false
 	switch format {
 	case "png":
+		if b[25] == 0 || b[25] == 4 {
+			model = "GRAY"
+		}
 		checkPNGDeclarations(b)
 		for pos := 8; pos+12 <= len(b); {
 			n := int(binary.BigEndian.Uint32(b[pos:]))
@@ -975,7 +1043,14 @@ func metadataOf(b []byte, format string) ([]byte, bool) {
 			data := b[pos+8 : pos+8+n]
 			switch kind {
 			case "iCCP":
+				if declared {
+					panic("invalid declared ICC: duplicate PNG profile")
+				}
+				declared = true
 				at := bytes.IndexByte(data, 0)
+				if at < 1 || at > 79 || at+2 >= len(data) || data[at+1] != 0 {
+					panic("invalid declared ICC: PNG envelope")
+				}
 				r, e := zlib.NewReader(bytes.NewReader(data[at+2:]))
 				must(e)
 				profile, e = io.ReadAll(r)
@@ -988,6 +1063,8 @@ func metadataOf(b []byte, format string) ([]byte, bool) {
 		}
 	case "jpeg":
 		adobe := false
+		parts := map[int][]byte{}
+		total := 0
 		for pos := 2; pos+2 <= len(b); {
 			if b[pos] != 255 {
 				panic("bad JPEG metadata framing")
@@ -1007,11 +1084,23 @@ func metadataOf(b []byte, format string) ([]byte, bool) {
 				panic("bad JPEG metadata framing")
 			}
 			data := b[pos+4 : pos+2+n]
-			if marker == 0xe2 && bytes.HasPrefix(data, []byte("ICC_PROFILE\x00")) {
-				if len(data) < 14 {
-					panic("bad ICC segment")
+			if marker == 0xc0 || marker == 0xc1 || marker == 0xc2 {
+				if len(data) < 6 {
+					panic("bad JPEG sample model")
 				}
-				profile = append(profile, data[14:]...)
+				model = map[byte]string{1: "GRAY", 3: "RGB ", 4: "CMYK"}[data[5]]
+			}
+			if marker == 0xe2 && bytes.HasPrefix(data, []byte("ICC_PROFILE\x00")) {
+				declared = true
+				if len(data) < 14 || data[12] == 0 || data[13] < data[12] || total != 0 && total != int(data[13]) {
+					panic("invalid declared ICC: JPEG envelope")
+				}
+				number := int(data[12])
+				if _, ok := parts[number]; ok {
+					panic("invalid declared ICC: duplicate JPEG part")
+				}
+				parts[number] = data[14:]
+				total = int(data[13])
 			} else if marker == 0xee && bytes.HasPrefix(data, []byte("Adobe")) {
 				if adobe || len(data) != 12 || data[11] > 2 {
 					panic("invalid Adobe display declaration")
@@ -1039,14 +1128,33 @@ func metadataOf(b []byte, format string) ([]byte, bool) {
 				}
 			}
 		}
+		for i := 1; i <= total; i++ {
+			part, ok := parts[i]
+			if !ok {
+				panic("invalid declared ICC: missing JPEG part")
+			}
+			profile = append(profile, part...)
+		}
 	case "webp":
+		extended, flag := false, false
 		for pos := 12; pos+8 <= len(b); {
 			n := int(binary.LittleEndian.Uint32(b[pos+4:]))
 			if pos+8+n > len(b) {
 				panic("bad WebP")
 			}
 			kind := string(b[pos : pos+4])
+			if kind == "VP8X" {
+				if n != 10 || extended {
+					panic("invalid WebP extended header")
+				}
+				extended = true
+				flag = b[pos+8]&0x20 != 0
+			}
 			if kind == "ICCP" {
+				if declared {
+					panic("invalid declared ICC: duplicate WebP profile")
+				}
+				declared = true
 				profile = b[pos+8 : pos+8+n]
 			}
 			if kind == "EXIF" || kind == "XMP " {
@@ -1054,6 +1162,12 @@ func metadataOf(b []byte, format string) ([]byte, bool) {
 			}
 			pos += 8 + n + n%2
 		}
+		if declared && !extended || flag != declared {
+			panic("invalid declared ICC: WebP flag")
+		}
+	}
+	if declared {
+		validateDeclaredICC(profile, model)
 	}
 	return profile, sensitive
 }
@@ -1208,6 +1322,25 @@ func main() {
 		frequencyFixture(os.Args[2], w, h, o, os.Args[6] == "16", os.Args[7] == "alpha")
 	case "wrong-pixels":
 		wrongPixels(os.Args[2], os.Args[3], os.Args[4])
+	case "profile-envelopes":
+		profileEnvelopes()
+	case "invalid-trns":
+		b := read(os.Args[2])
+		out := append([]byte{}, b[:8]...)
+		for p := 8; p < len(b); {
+			n := int(binary.BigEndian.Uint32(b[p:]))
+			k, d := string(b[p+4:p+8]), b[p+8:p+8+n]
+			if k == "tRNS" {
+				if b[25] == 3 {
+					d = append(bytes.Clone(d), 0)
+				} else {
+					d = d[:len(d)-1]
+				}
+			}
+			out = append(out, chunk(k, d)...)
+			p += n + 12
+		}
+		write(os.Args[3], out)
 	case "empty-profiles":
 		emptyProfiles()
 	case "declarations":
@@ -1251,7 +1384,7 @@ func main() {
 		fmt.Println(hex.EncodeToString(sum[:]))
 	case "private-webp":
 		b := read(os.Args[2])
-		data := bytes.Repeat([]byte(private), 100)
+		data := []byte("<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><rdf:Description xmlns:dc=\"http://purl.org/dc/elements/1.1/\" dc:description=\"" + string(bytes.Repeat([]byte(private), 100)) + "\"/></rdf:RDF></x:xmpmeta>")
 		var c bytes.Buffer
 		c.WriteString("XMP ")
 		must(binary.Write(&c, binary.LittleEndian, uint32(len(data))))
@@ -1388,11 +1521,13 @@ func compareFixture(input, output string, side int) {
 			limit = 16 * 257
 		}
 		if c == 3 {
-            limit = 2 * 257
-            // Different antialiasing kernels shift fractional-edge coverage.
-            // Keep the 20-level per-pixel cap and a 4/255 mean alpha cap.
-            if resized { limit=4*257 }
-        }
+			limit = 2 * 257
+			// Different antialiasing kernels shift fractional-edge coverage.
+			// Keep the 20-level per-pixel cap and a 4/255 mean alpha cap.
+			if resized {
+				limit = 4 * 257
+			}
+		}
 		if d > uint64(dw)*uint64(dh)*limit {
 			panic(fmt.Sprintf("fixture channel %d mean difference %.3f, bound %.3f", c, float64(d)/float64(dw*dh*257), float64(limit)/257))
 		}
@@ -1505,7 +1640,7 @@ func makeDeclarations() {
 	decls := map[string][]byte{"gAMA": {0, 1, 0x86, 0xa0}, "cHRM": chroma(), "sRGB": {2}, "cICP": {1, 13, 0, 1}}
 	for kind, good := range decls {
 		put := func(label string, payload []byte) {
-			extra := append(payload, chunk("tEXt", bytes.Repeat([]byte(private), 100))...)
+			extra := append(payload, chunk("tEXt", append([]byte("Author\x00"), bytes.Repeat([]byte(private), 100)...))...)
 			write(label+"-"+kind+".png", append(append(append([]byte{}, b[:33]...), extra...), b[33:]...))
 		}
 		put("valid", chunk(kind, good))
@@ -1538,6 +1673,7 @@ func makeDeclarations() {
 // parser and never treats a CRC-correct chunk name as proof of its payload.
 func checkPNGDeclarations(b []byte) {
 	seen := map[string][]byte{}
+	paletteEntries, transparencySeen, pixelsSeen := 0, false, false
 	for pos := 8; pos < len(b); {
 		if pos+12 > len(b) {
 			panic("invalid PNG declaration framing")
@@ -1549,6 +1685,38 @@ func checkPNGDeclarations(b []byte) {
 		kind, d := string(b[pos+4:pos+8]), b[pos+8:pos+8+n]
 		if crc32.ChecksumIEEE(b[pos+4:pos+8+n]) != binary.BigEndian.Uint32(b[pos+8+n:]) {
 			panic("invalid PNG declaration CRC")
+		}
+		if kind == "PLTE" {
+			paletteEntries = n / 3
+		}
+		if kind == "IDAT" {
+			pixelsSeen = true
+		}
+		if kind == "tRNS" {
+			bad := transparencySeen || pixelsSeen
+			transparencySeen = true
+			limit := uint32(1)<<b[24] - 1
+			switch b[25] {
+			case 0:
+				bad = bad || n != 2
+				if n == 2 {
+					bad = bad || uint32(binary.BigEndian.Uint16(d)) > limit
+				}
+			case 2:
+				bad = bad || n != 6
+				if n == 6 {
+					for at := 0; at < 6; at += 2 {
+						bad = bad || uint32(binary.BigEndian.Uint16(d[at:])) > limit
+					}
+				}
+			case 3:
+				bad = bad || paletteEntries == 0 || n < 1 || n > paletteEntries
+			default:
+				bad = true
+			}
+			if bad {
+				panic("invalid PNG transparency declaration")
+			}
 		}
 		switch kind {
 		case "gAMA", "cHRM", "sRGB", "cICP":
@@ -1751,7 +1919,7 @@ func attachProfile(name string, profile []byte, orient int) {
 		must(z.Close())
 		extra := chunk("iCCP", append([]byte("Generated\x00\x00"), compressed.Bytes()...))
 		extra = append(extra, chunk("eXIf", exif(uint16(orient)))...)
-		extra = append(extra, chunk("tEXt", bytes.Repeat([]byte(private), 100))...)
+		extra = append(extra, chunk("tEXt", append([]byte("Author\x00"), bytes.Repeat([]byte(private), 100)...))...)
 		write(name, append(append(append([]byte{}, b[:33]...), extra...), b[33:]...))
 	} else {
 		seg := func(k byte, d []byte) []byte {
@@ -2175,7 +2343,7 @@ func transparencyFixture(name string, depth, model byte, orient int) {
 	out = append(out, chunk("IHDR", header)...)
 	out = append(out, chunk("iCCP", append([]byte("Generated\x00\x00"), profileData.Bytes()...))...)
 	out = append(out, chunk("eXIf", exif(uint16(orient)))...)
-	out = append(out, chunk("tEXt", bytes.Repeat([]byte(private), 100))...)
+	out = append(out, chunk("tEXt", append([]byte("Author\x00"), bytes.Repeat([]byte(private), 100)...))...)
 	trns := []byte{0, 0}
 	if model == 3 {
 		out = append(out, chunk("PLTE", []byte{0, 0, 0, 255, 255, 255})...)
@@ -2333,4 +2501,128 @@ func areaReference(src image.Image, orient, ow, oh, dw, dh, x, y int) [4]float64
 		sum[c] /= area
 	}
 	return sum
+}
+
+// Parse the ICC envelope independently of the adapter. A declared profile is
+// a record even when its payload is empty; absence never validates that record.
+func validateDeclaredICC(profile []byte, model string) {
+	if len(profile) < 132 {
+		panic("invalid declared ICC: missing header/tag count")
+	}
+	if binary.BigEndian.Uint32(profile) != uint32(len(profile)) || string(profile[36:40]) != "acsp" || string(profile[16:20]) != model {
+		panic("invalid declared ICC: size, signature or sample model")
+	}
+	count := uint64(binary.BigEndian.Uint32(profile[128:132]))
+	firstData := uint64(132) + count*12
+	if firstData > uint64(len(profile)) {
+		panic("invalid declared ICC: tag table")
+	}
+	for pos := uint64(132); pos < firstData; pos += 12 {
+		offset := uint64(binary.BigEndian.Uint32(profile[pos+4:]))
+		length := uint64(binary.BigEndian.Uint32(profile[pos+8:]))
+		if offset < firstData || offset%4 != 0 || length < 8 || offset+length > uint64(len(profile)) {
+			panic("invalid declared ICC: tag bounds")
+		}
+	}
+}
+
+func profileEnvelopes() {
+	b := read("photo.png")
+	for _, kind := range []string{"name-long", "method", "duplicate"} {
+		out := append([]byte{}, b[:8]...)
+		for p := 8; p < len(b); {
+			n := int(binary.BigEndian.Uint32(b[p:]))
+			k, d := string(b[p+4:p+8]), b[p+8:p+8+n]
+			if k == "iCCP" {
+				at := bytes.IndexByte(d, 0)
+				switch kind {
+				case "name-long":
+					d = append(append(bytes.Repeat([]byte("A"), 80), 0, 0), d[at+2:]...)
+				case "method":
+					d = bytes.Clone(d)
+					d[at+1] = 1
+				case "duplicate":
+					out = append(out, chunk(k, d)...)
+				}
+			}
+			out = append(out, chunk(k, d)...)
+			p += n + 12
+		}
+		write("profile-png-"+kind+".png", out)
+	}
+	b = read("orientation-1.jpg")
+	profile, _ := metadataOf(b, "jpeg")
+	var stripped bytes.Buffer
+	stripped.Write(b[:2])
+	for p := 2; p < len(b); {
+		k := b[p+1]
+		if k == 0xda {
+			stripped.Write(b[p:])
+			break
+		}
+		n := int(binary.BigEndian.Uint16(b[p+2:]))
+		d := b[p+4 : p+2+n]
+		if !(k == 0xe2 && bytes.HasPrefix(d, []byte("ICC_PROFILE\x00"))) {
+			stripped.Write(b[p : p+2+n])
+		}
+		p += 2 + n
+	}
+	b = stripped.Bytes()
+	segment := func(number, total byte, body []byte) []byte {
+		d := append([]byte("ICC_PROFILE\x00"), number, total)
+		d = append(d, body...)
+		s := []byte{255, 226}
+		s = binary.BigEndian.AppendUint16(s, uint16(len(d)+2))
+		return append(s, d...)
+	}
+	first, second := segment(1, 2, profile[:200]), segment(2, 2, profile[200:])
+	for _, kind := range []string{"ordered", "reverse", "missing", "duplicate", "total", "zero-number", "zero-total", "short"} {
+		extra := append(bytes.Clone(first), second...)
+		switch kind {
+		case "reverse":
+			extra = append(bytes.Clone(second), first...)
+		case "missing":
+			extra = first
+		case "duplicate":
+			extra = append(append(bytes.Clone(first), first...), second...)
+		case "total":
+			extra = append(bytes.Clone(first), segment(2, 3, profile[200:])...)
+		case "zero-number":
+			extra = append(segment(0, 2, profile[:200]), second...)
+		case "zero-total":
+			extra = segment(1, 0, profile)
+		case "short":
+			extra = append([]byte{255, 226, 0, 14}, []byte("ICC_PROFILE\x00")...)
+		}
+		write("profile-jpeg-"+kind+".jpg", append(append(append([]byte{}, b[:2]...), extra...), b[2:]...))
+	}
+	b = read("photo.webp")
+	for _, kind := range []string{"flag-off", "chunk-missing", "duplicate", "no-header"} {
+		out := append([]byte{}, b[:12]...)
+		for p := 12; p < len(b); {
+			n := int(binary.LittleEndian.Uint32(b[p+4:]))
+			k := string(b[p : p+4])
+			c := bytes.Clone(b[p : p+8+n+n%2])
+			p += 8 + n + n%2
+			if k == "VP8X" {
+				if kind == "no-header" {
+					continue
+				}
+				if kind == "flag-off" {
+					c[8] &^= 0x20
+				}
+			}
+			if k == "ICCP" {
+				if kind == "chunk-missing" {
+					continue
+				}
+				if kind == "duplicate" {
+					out = append(out, c...)
+				}
+			}
+			out = append(out, c...)
+		}
+		binary.LittleEndian.PutUint32(out[4:], uint32(len(out)-8))
+		write("profile-webp-"+kind+".webp", out)
+	}
 }
