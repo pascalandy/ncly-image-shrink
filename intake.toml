@@ -69,3 +69,21 @@ statement = "Thumbnail always converts or exports at depth 8. PNG must therefore
 source = "https://github.com/libvips/libvips/blob/v8.18.7/libvips/resample/thumbnail.c"
 revision = "v8.18.7"
 read = "vips_thumbnail_build, non-linear processing-space conversion and the Colour management block stating that export always uses depth 8"
+
+[[facts]]
+kind = "sourced"
+statement = "Without an ICC transform, thumbnail still converts three-or-more-band input to sRGB in non-linear processing. A CMYK input can therefore lose compatibility with its original CMYK profile even when no profile transform was requested."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/libvips/resample/thumbnail.c"
+revision = "v8.18.7"
+read = "vips_thumbnail_build, the non-linear branch at lines 792-807 and the processing-space colour conversion"
+
+[[facts]]
+kind = "sourced"
+statement = "jpegload supports CMYK and YCbCr, and autorotate interprets the orientation while loading. Resize uses a scale factor, preserves aspect ratio and uses centered Lanczos3 reduction by default; it does not premultiply alpha. JPEG subsample_mode off sets each component's sampling factors to one."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/libvips/foreign/jpegload.c and libvips/resample/resize.c and libvips/foreign/vips2jpeg.c"
+revision = "v8.18.7"
+read = "vips_jpegload documentation for colour models and autorotate; vips_resize documentation for scale, kernel, aspect ratio and alpha; set_cinfo sampling factors at lines 676-689"
+
+[[facts]]
+kind = "inference"
+statement = "Use jpegload autorotate plus one native-model resize operation for JPEG, with no second chroma subsampling. Keep PNG orientation/resizing in Go at native precision, explicitly encoding Gray and Gray-alpha to retain the relationship between samples and the original ICC profile. Refuse malformed or incompatible declarations before effects, and retain final complete ICC equality."

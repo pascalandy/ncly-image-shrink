@@ -25,6 +25,10 @@ Run `just acceptance` on the tag under review. The command needs vips 8.18.7 or 
 
 [acceptance.txtar](testdata/script/acceptance.txtar) owns error stimuli and expected answers. [shrink-first.txtar](testdata/script/shrink-first.txtar) retains the first public-boundary preview scenario. Its first failing commit is recorded in review.toml.
 
+The independent reader checks every pixel against the decoded input, including orientation, centered JPEG chroma expansion and a box reference for resizing. It bounds each channel and the whole image. Separate bad outputs keep valid privacy metadata while corrupting pixels, dropping ICC or changing gamma. Quality cases compare complete decoded JPEG/WebP outputs at 20 and 95. Multipart cases generate APNG/WebP frame sequences, MPO and concatenated JPEGs.
+
+Post-publication INT/create and TERM/replace tests use `survives`. An independent observer reads the complete new destination before it makes the signal marker. A normal scratch-file cleanup load provides that interval, without a production hook. The tests also force a cleanup error after publication and check the retained image and reported path.
+
 ## Human items
 
 The human gives the UAT verdict and chooses whether a lossy sharing copy looks acceptable. This local command needs no key, grant or network. The human approves installation of a missing image program.

@@ -72,6 +72,9 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | Private staging | Output: Temporary file | `staging` | `worker-fails` |
 | Descriptive metadata | Output: Keeps private data of the input | `privacy` | `invalid-result` |
 | Orientation and color | Output: Keeps data that a reader needs; Output: Loses data that changes the meaning | `orientation`, `profile`, `png-color`, `alpha`, `depth` | `invalid-result` |
+| PNG display declarations | Intake: gAMA, cHRM, sRGB and cICP layouts, values, cardinality and conflicts | `png-color`, `privacy` | `input-invalid`, `invalid-result` |
+| Compatible sample models and profiles | Intake: Gray, Gray-alpha at 8/16 bits, RGB and CMYK profiles, orientation and resize | `profile`, `pixels`, `alpha`, `depth` | `input-invalid`, `invalid-result` |
+| JPEG display declarations | Intake: Adobe RGB/YCbCr/CMYK/YCCK and JFIF | `pixels`, `profile` | `input-invalid` |
 | Strict byte saving | Intake: output size | `smaller` | `not-smaller` |
 | Interruption and cleanup | Interruption: SIGINT or SIGTERM during the work; Interruption: Timeout | `publication` | `interrupted`, `terminated`, `worker-fails` |
 | Faithful dry run | Other: Dry run | `preview` | `input-invalid`, `exists` |

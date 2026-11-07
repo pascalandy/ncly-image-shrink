@@ -4,7 +4,7 @@
 
 ## Wraps
 
-- libvips 8.18.7 or later, through `vips`. JPEG and WebP use thumbnail. PNG prepares orientation and resizing at native precision in Go, then uses the lossless vips saver
+- libvips 8.18.7 or later, through `vips`. JPEG uses native-model resize with loader autorotation, WebP uses thumbnail, and PNG prepares orientation and resizing at native precision in Go before the lossless vips saver. Gray and Gray-alpha keep their sample model and ICC compatibility
 - Go image decoders and `golang.org/x/image`, pinned in go.mod, validate input and output without asking the image program to judge itself
 
 ## Intake
@@ -22,6 +22,9 @@
 - Resource policy: cap compressed input at 64 MiB and expanded input at 40 million pixels before decoding. Limit the vips call, including its version probe, to 30 seconds. One processing thread and a 64 MiB operation cache reduce memory use, but that cache is not an operating-system memory ceiling. Inference: no source gives it
 - Display declarations to cover are EXIF orientation, ICC color profiles, PNG gamma and chromaticity, PNG bit depth and transparency, JPEG CMYK and Adobe markers, and WebP alpha. Multipage JPEG and animated PNG or WebP must be refused instead of losing parts. Inference: no source gives it
 - Thumbnail always converts or exports at depth 8. PNG must therefore prepare orientation and resizing at native precision before vips copy compresses it, so a 16-bit input is not quantized. Source: https://github.com/libvips/libvips/blob/v8.18.7/libvips/resample/thumbnail.c, at v8.18.7. Read: vips_thumbnail_build, non-linear processing-space conversion and the Colour management block stating that export always uses depth 8
+- Without an ICC transform, thumbnail still converts three-or-more-band input to sRGB in non-linear processing. A CMYK input can therefore lose compatibility with its original CMYK profile even when no profile transform was requested. Source: https://github.com/libvips/libvips/blob/v8.18.7/libvips/resample/thumbnail.c, at v8.18.7. Read: vips_thumbnail_build, the non-linear branch at lines 792-807 and the processing-space colour conversion
+- jpegload supports CMYK and YCbCr, and autorotate interprets the orientation while loading. Resize uses a scale factor, preserves aspect ratio and uses centered Lanczos3 reduction by default; it does not premultiply alpha. JPEG subsample_mode off sets each component's sampling factors to one. Source: https://github.com/libvips/libvips/blob/v8.18.7/libvips/foreign/jpegload.c and libvips/resample/resize.c and libvips/foreign/vips2jpeg.c, at v8.18.7. Read: vips_jpegload documentation for colour models and autorotate; vips_resize documentation for scale, kernel, aspect ratio and alpha; set_cinfo sampling factors at lines 676-689
+- Use jpegload autorotate plus one native-model resize operation for JPEG, with no second chroma subsampling. Keep PNG orientation/resizing in Go at native precision, explicitly encoding Gray and Gray-alpha to retain the relationship between samples and the original ICC profile. Refuse malformed or incompatible declarations before effects, and retain final complete ICC equality. Inference: no source gives it
 
 **Experiments.**
 
