@@ -668,6 +668,8 @@ func main() {
 		panic("mode required")
 	}
 	switch os.Args[1] {
+	case "fixture":
+		compareFixture(os.Args[2], os.Args[3])
 	case "color":
 		check(os.Args[3], 1, false, os.Args[2])
 	case "make":
@@ -758,4 +760,185 @@ func main() {
 	default:
 		panic("unknown mode " + strings.Join(os.Args[1:], " "))
 	}
+}
+
+// compareFixture uses the supplied input as an independent pixel reference.
+// Four area samples per output pixel allow bounded encoder/resampler error.
+func compareFixture(input, output string) {
+	inBytes, outBytes := read(input), read(output)
+	src, format, err := image.Decode(bytes.NewReader(inBytes))
+	must(err)
+	dst, outFormat, err := image.Decode(bytes.NewReader(outBytes))
+	must(err)
+	if format != outFormat {
+		panic("fixture output changed format")
+	}
+	profile, _ := metadataOf(inBytes, format)
+	outProfile, sensitive := metadataOf(outBytes, format)
+	if !bytes.Equal(profile, outProfile) || sensitive {
+		panic("fixture profile or privacy check failed")
+	}
+	orient := fixtureOrientation(inBytes, format)
+	sw, sh := src.Bounds().Dx(), src.Bounds().Dy()
+	ow, oh := sw, sh
+	if orient >= 5 {
+		ow, oh = oh, ow
+	}
+	dw, dh := dst.Bounds().Dx(), dst.Bounds().Dy()
+	longest := ow
+	if oh > longest {
+		longest = oh
+	}
+	scale := 1.0
+	if longest > 2048 {
+		scale = 2048.0 / float64(longest)
+	}
+	near := func(a, b float64) bool {
+		d := a - b
+		if d < 0 {
+			d = -d
+		}
+		return d <= 1
+	}
+	if dw < 1 || dh < 1 || dw > ow || dh > oh || !near(float64(dw), float64(ow)*scale) || !near(float64(dh), float64(oh)*scale) {
+		panic("fixture geometry changed")
+	}
+	var differences [4]uint64
+	for y := 0; y < dh; y++ {
+		for x := 0; x < dw; x++ {
+			var expected [4]uint64
+			for _, dy := range []float64{.25, .75} {
+				for _, dx := range []float64{.25, .75} {
+					a, b := int((float64(x)+dx)*float64(ow)/float64(dw)), int((float64(y)+dy)*float64(oh)/float64(dh))
+					sx, sy := a, b
+					switch orient {
+					case 2:
+						sx = sw - 1 - a
+					case 3:
+						sx, sy = sw-1-a, sh-1-b
+					case 4:
+						sy = sh - 1 - b
+					case 5:
+						sx, sy = b, a
+					case 6:
+						sx, sy = b, sh-1-a
+					case 7:
+						sx, sy = sw-1-b, sh-1-a
+					case 8:
+						sx, sy = sw-1-b, a
+					}
+					r, g, bv, aValue := src.At(sx, sy).RGBA()
+					for c, v := range []uint32{r, g, bv, aValue} {
+						expected[c] += uint64(v)
+					}
+				}
+			}
+			r, g, bv, a := dst.At(x, y).RGBA()
+			for c, v := range []uint32{r, g, bv, a} {
+				e := int64(expected[c] / 4)
+				d := int64(v) - e
+				if d < 0 {
+					d = -d
+				}
+				differences[c] += uint64(d)
+			}
+		}
+	}
+	for c, d := range differences {
+		limit := uint64(24 * 257)
+		if c == 3 {
+			limit = 8 * 257
+		}
+		if d > uint64(dw)*uint64(dh)*limit {
+			panic("fixture pixel content differs from the oriented source")
+		}
+	}
+	if format == "png" {
+		if inBytes[24] == 16 && outBytes[24] != 16 {
+			panic("fixture precision changed")
+		}
+		for pos := 8; pos+12 <= len(inBytes); {
+			n := int(binary.BigEndian.Uint32(inBytes[pos:]))
+			kind := string(inBytes[pos+4 : pos+8])
+			if kind == "gAMA" || kind == "cHRM" || kind == "sRGB" || kind == "cICP" {
+				if !bytes.Contains(outBytes, inBytes[pos:pos+12+n]) {
+					panic("fixture color declaration changed")
+				}
+			}
+			pos += 12 + n
+		}
+	}
+	fmt.Println("fixture pixels, geometry, profile and privacy match")
+}
+
+func fixtureOrientation(data []byte, format string) int {
+	var raw []byte
+	switch format {
+	case "jpeg":
+		for pos := 2; pos+4 < len(data) && data[pos] == 255; {
+			marker := data[pos+1]
+			if marker == 0xda {
+				break
+			}
+			n := int(binary.BigEndian.Uint16(data[pos+2:]))
+			if n < 2 || pos+n+2 > len(data) {
+				break
+			}
+			if marker == 0xe1 && bytes.HasPrefix(data[pos+4:pos+n+2], []byte("Exif\x00\x00")) {
+				raw = data[pos+10 : pos+n+2]
+				break
+			}
+			pos += n + 2
+		}
+	case "png":
+		for pos := 8; pos+12 <= len(data); {
+			n := int(binary.BigEndian.Uint32(data[pos:]))
+			if pos+12+n > len(data) {
+				break
+			}
+			if string(data[pos+4:pos+8]) == "eXIf" {
+				raw = data[pos+8 : pos+8+n]
+				break
+			}
+			pos += 12 + n
+		}
+	case "webp":
+		for pos := 12; pos+8 <= len(data); {
+			n := int(binary.LittleEndian.Uint32(data[pos+4:]))
+			if pos+8+n > len(data) {
+				break
+			}
+			if string(data[pos:pos+4]) == "EXIF" {
+				raw = bytes.TrimPrefix(data[pos+8:pos+8+n], []byte("Exif\x00\x00"))
+				break
+			}
+			pos += 8 + n + n%2
+		}
+	}
+	if len(raw) < 8 {
+		return 1
+	}
+	var endian binary.ByteOrder = binary.LittleEndian
+	if string(raw[:2]) == "MM" {
+		endian = binary.BigEndian
+	}
+	start := int(endian.Uint32(raw[4:]))
+	if start < 0 || start+2 > len(raw) {
+		panic("fixture TIFF offset invalid")
+	}
+	count := int(endian.Uint16(raw[start:]))
+	for n := 0; n < count; n++ {
+		at := start + 2 + n*12
+		if at+12 > len(raw) {
+			panic("fixture TIFF entry invalid")
+		}
+		if endian.Uint16(raw[at:]) == 0x112 {
+			v := int(endian.Uint16(raw[at+8:]))
+			if v < 1 || v > 8 {
+				panic("fixture orientation invalid")
+			}
+			return v
+		}
+	}
+	return 1
 }

@@ -44,7 +44,11 @@ output="${input%.*}.shrunk.${input##*.}"
 ncly image shrink "$input" --json --no-input
 [[ -f "$output" ]] || fct_die "the output is absent"
 [[ "$(wc -c < "$output")" -lt "$(wc -c < "$input")" ]] || fct_die "the output saves no bytes"
-imageproof check 1 "$output"
+if [[ -n "$fixture" ]]; then
+	imageproof fixture "$input" "$output"
+else
+	imageproof check 1 "$output"
+fi
 [[ "$(fct_sum "$input")" == "$input_before" ]] || fct_die "the input changed"
 if [[ -n "$fixture" ]]; then
 	[[ "$(fct_sum "$fixture")" == "$before" ]] || fct_die "the fixture changed"
@@ -57,7 +61,11 @@ grep -q '"code":"IMAGE_SHRINK_NOT_SMALLER"' "$scratch/refusal.err" || fct_die "w
 [[ ! -e tiny.shrunk.png ]] || fct_die "the refused PNG left an output"
 # spec: replace
 ncly image shrink "$input" --force --json --no-input
-imageproof check 1 "$output"
+if [[ -n "$fixture" ]]; then
+	imageproof fixture "$input" "$output"
+else
+	imageproof check 1 "$output"
+fi
 imageproof clean
 cd - > /dev/null
 just uninstall > /dev/null

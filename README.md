@@ -13,7 +13,7 @@ Use `ncly describe image shrink --json` for flags, limits and result fields. A d
 
 ## Install
 
-Install [Nicely](https://github.com/pascalandy/nicely#install), Go, just and libvips 8.18.7 or later. On macOS use `brew install vips`. On Omarchy use `sudo pacman -S libvips`. `ncly doctor image shrink --json` reports the required program and its install command after installation.
+Install [Nicely](https://github.com/pascalandy/nicely#install), Go, just and libvips 8.18.7 or later. On macOS use `brew install vips`. On Omarchy use `sudo pacman -S libvips`. `ncly doctor image-shrink --json` reports the required program and its install command after installation.
 
 Replace TAG with the highest release tag. `git ls-remote --tags --refs --sort=-v:refname https://github.com/pascalandy/ncly-image-shrink` lists the tags, highest first.
 
