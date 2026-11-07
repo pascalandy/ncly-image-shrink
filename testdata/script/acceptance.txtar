@@ -2208,7 +2208,7 @@ func transparencyFixture(name string, depth, model byte, orient int) {
 		trns = make([]byte, 6)
 	}
 	out = append(out, chunk("tRNS", trns)...)
-	out = append(out, chunk("IDAT", compressed.Bytes()...)...)
+	out = append(out, chunk("IDAT", compressed.Bytes())...)
 	out = append(out, chunk("IEND", nil)...)
 	write(name, out)
 }
