@@ -16,7 +16,6 @@ The manifest holds command syntax and result types. Each line below has a spec I
 
 | ID | Condition | Code |
 |---|---|---|
-| `input-invalid` | Missing, empty, unreadable, truncated or malformed input is refused before vips starts, naming the input | `IMAGE_SHRINK_INPUT` |
 | `unsupported` | A format outside JPEG, PNG or WebP, or an extension that disagrees with its bytes, is refused before vips starts | `IMAGE_SHRINK_FORMAT` |
 | `budget` | Compressed input above 64 MiB, over 40 million pixels, or a dimension above 40000 is refused before full decoding | `IMAGE_SHRINK_LIMIT` |
 | `options` | Invalid size, quality or timeout values are refused | `USAGE_INVALID` |
@@ -45,13 +44,11 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | `geometry` | The longest side fits the chosen bound, defaults to 2048, retains aspect ratio within pixel rounding, and never enlarges |
 | `orientation` | All eight EXIF orientations are applied to the pixels before orientation metadata is removed |
 | `png-color` | PNG gamma, chromaticity and sRGB declarations retain their display meaning |
-| `alpha` | PNG and WebP retain transparency |
 | `depth` | PNG retains its 16-bit sample precision |
 | `names` | Paths with spaces, leading dashes, shell characters or loader-option characters are data, and output stays beside the input |
 | `preview` | Dry run changes no file, shares input and conflict checks, reports output and overwrite, and marks compression and the publication operation pending |
 | `staging` | Private exclusive staging cannot follow a planted temporary symlink and is removed on success, failure and signals |
 | `replace` | Force atomically replaces only the completed output and keeps the replaced regular file's permissions |
-| `pixels` | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing |
 | `quality` | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding |
 | `profile` | The complete ICC color profile is retained |
 | `privacy` | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata |
@@ -91,4 +88,10 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 
 ## Open lines
 
-None. The generic cases and intake families remain selected for whole-family regression proof in round 2.
+The second review pair reproduced Gray transparency loss, malformed empty-profile acceptance and an aliased independent content reference. The existing promises remain unchanged.
+
+| ID | Command | Part | Case | Code |
+|---|---|---|---|---|
+| `input-invalid` | `ncly image shrink` | Failures | Missing, empty, unreadable, truncated or malformed input is refused before vips starts, naming the input | `IMAGE_SHRINK_INPUT` |
+| `alpha` | `ncly image shrink` | Acceptance | PNG and WebP retain transparency | - |
+| `pixels` | `ncly image shrink` | Acceptance | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing | - |
