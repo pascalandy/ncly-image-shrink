@@ -10,6 +10,7 @@ import (
 func pngDeclarations(chunks []chunk) error {
 	seen := map[string][]byte{}
 	afterPixels := false
+	afterPalette := false
 	if len(chunks) == 0 || chunks[0].kind != "IHDR" || len(chunks[0].data) != 13 {
 		return errImage
 	}
@@ -18,9 +19,12 @@ func pngDeclarations(chunks []chunk) error {
 		if c.kind == "IDAT" {
 			afterPixels = true
 		}
+		if c.kind == "PLTE" {
+			afterPalette = true
+		}
 		switch c.kind {
 		case "gAMA", "cHRM", "sRGB", "cICP", "iCCP", "sBIT", "eXIf":
-			if _, exists := seen[c.kind]; exists || afterPixels {
+			if _, exists := seen[c.kind]; exists || c.kind != "eXIf" && (afterPixels || afterPalette) {
 				return errImage
 			}
 			seen[c.kind] = c.data
