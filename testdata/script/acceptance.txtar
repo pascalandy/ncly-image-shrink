@@ -9,19 +9,19 @@ chmod 755 bin/vips
 symlink photo.shrunk.png.tmp -> photo.png
 protect photo.png photo.shrunk.png.tmp
 predicts ncly image shrink photo.png
-reads -case 'Keeps private data of the input' -private 'Ana Lima' photo.shrunk.png reference photo.png bin/imageproof check 1
-reads -case 'Keeps data that a reader needs' -private 'Montreal 45.5019' photo.shrunk.png reference photo.png bin/imageproof check 1
-reads -case 'Loses data that changes the meaning' photo.shrunk.png reference photo.png bin/imageproof check 1
+reads -case 'Keeps private data of the input' -private 'Ana Lima' photo.shrunk.png reference photo.png bin/imageproof match photo.png '{}'
+reads -case 'Keeps data that a reader needs' -private 'Montreal 45.5019' photo.shrunk.png reference photo.png bin/imageproof match photo.png '{}'
+reads -case 'Loses data that changes the meaning' photo.shrunk.png reference photo.png bin/imageproof match photo.png '{}'
 exec bin/imageproof clean
 # R1-F3: same valid ICC, gamma and privacy, but corrupt 1008 of 2048 pixels.
 # spec: pixels
 exec bin/imageproof bad-pixels photo.shrunk.png bad-fidelity.png
-reads photo.shrunk.png reference bad-fidelity.png bin/imageproof check 1 '{}' 64 32
+reads photo.shrunk.png reference bad-fidelity.png bin/imageproof match photo.png '{}' 64
 
 # The exact manifest example proves real byte saving and removal of its XMP.
 # spec: pixels format smaller privacy profile alpha
 ncly image shrink example.webp --json
-reads example.shrunk.webp reference example.webp bin/imageproof check 1
+reads example.shrunk.webp reference example.webp bin/imageproof match example.webp '{}'
 
 # R1-F1: entire display-declaration family, not a single privacy payload.
 # spec: privacy input-invalid png-color
@@ -152,57 +152,57 @@ protect photo.png
 chmod 640 photo.shrunk.png
 predicts ncly image shrink photo.png --force
 exec bin/imageproof mode photo.shrunk.png 640
-reads -case 'Exists, without --force' photo.shrunk.png reference photo.png bin/imageproof check 1
+reads -case 'Exists, without --force' photo.shrunk.png reference photo.png bin/imageproof match photo.png '{}'
 
 # All eight orientations carry a real TIFF orientation entry, ICC profile,
 # private comment and non-symmetric colored quadrants.
 # spec: orientation profile format pixels privacy
 ncly image shrink orientation-1.jpg --json
-reads orientation-1.shrunk.jpg reference orientation-1.jpg bin/imageproof check 1
+reads orientation-1.shrunk.jpg reference orientation-1.jpg bin/imageproof match orientation-1.jpg '{}'
 ncly image shrink orientation-2.jpg --json
-reads orientation-2.shrunk.jpg reference orientation-2.jpg bin/imageproof check 2
+reads orientation-2.shrunk.jpg reference orientation-2.jpg bin/imageproof match orientation-2.jpg '{}'
 ncly image shrink orientation-3.jpg --json
-reads orientation-3.shrunk.jpg reference orientation-3.jpg bin/imageproof check 3
+reads orientation-3.shrunk.jpg reference orientation-3.jpg bin/imageproof match orientation-3.jpg '{}'
 ncly image shrink orientation-4.jpg --json
-reads orientation-4.shrunk.jpg reference orientation-4.jpg bin/imageproof check 4
+reads orientation-4.shrunk.jpg reference orientation-4.jpg bin/imageproof match orientation-4.jpg '{}'
 ncly image shrink orientation-5.jpg --json
-reads orientation-5.shrunk.jpg reference orientation-5.jpg bin/imageproof check 5
+reads orientation-5.shrunk.jpg reference orientation-5.jpg bin/imageproof match orientation-5.jpg '{}'
 ncly image shrink orientation-6.jpg --json
-reads orientation-6.shrunk.jpg reference orientation-6.jpg bin/imageproof check 6
+reads orientation-6.shrunk.jpg reference orientation-6.jpg bin/imageproof match orientation-6.jpg '{}'
 ncly image shrink orientation-7.jpg --json
-reads orientation-7.shrunk.jpg reference orientation-7.jpg bin/imageproof check 7
+reads orientation-7.shrunk.jpg reference orientation-7.jpg bin/imageproof match orientation-7.jpg '{}'
 ncly image shrink orientation-8.jpg --json
-reads orientation-8.shrunk.jpg reference orientation-8.jpg bin/imageproof check 8
+reads orientation-8.shrunk.jpg reference orientation-8.jpg bin/imageproof match orientation-8.jpg '{}'
 
 # The native PNG orientation path preserves unassociated alpha samples.
 # spec: orientation pixels alpha
 ncly image shrink png-orientation-1.png --json
-reads png-orientation-1.shrunk.png reference png-orientation-1.png bin/imageproof check 1
+reads png-orientation-1.shrunk.png reference png-orientation-1.png bin/imageproof match png-orientation-1.png '{}'
 ncly image shrink png-orientation-2.png --json
-reads png-orientation-2.shrunk.png reference png-orientation-2.png bin/imageproof check 2
+reads png-orientation-2.shrunk.png reference png-orientation-2.png bin/imageproof match png-orientation-2.png '{}'
 ncly image shrink png-orientation-3.png --json
-reads png-orientation-3.shrunk.png reference png-orientation-3.png bin/imageproof check 3
+reads png-orientation-3.shrunk.png reference png-orientation-3.png bin/imageproof match png-orientation-3.png '{}'
 ncly image shrink png-orientation-4.png --json
-reads png-orientation-4.shrunk.png reference png-orientation-4.png bin/imageproof check 4
+reads png-orientation-4.shrunk.png reference png-orientation-4.png bin/imageproof match png-orientation-4.png '{}'
 ncly image shrink png-orientation-5.png --json
-reads png-orientation-5.shrunk.png reference png-orientation-5.png bin/imageproof check 5
+reads png-orientation-5.shrunk.png reference png-orientation-5.png bin/imageproof match png-orientation-5.png '{}'
 ncly image shrink png-orientation-6.png --json
-reads png-orientation-6.shrunk.png reference png-orientation-6.png bin/imageproof check 6
+reads png-orientation-6.shrunk.png reference png-orientation-6.png bin/imageproof match png-orientation-6.png '{}'
 ncly image shrink png-orientation-7.png --json
-reads png-orientation-7.shrunk.png reference png-orientation-7.png bin/imageproof check 7
+reads png-orientation-7.shrunk.png reference png-orientation-7.png bin/imageproof match png-orientation-7.png '{}'
 ncly image shrink png-orientation-8.png --json
-reads png-orientation-8.shrunk.png reference png-orientation-8.png bin/imageproof check 8
+reads png-orientation-8.shrunk.png reference png-orientation-8.png bin/imageproof match png-orientation-8.png '{}'
 
 # Independent display-declaration cases without ICC overriding them.
 # spec: png-color pixels privacy
 ncly image shrink chroma.png --json
-reads chroma.shrunk.png reference chroma.png bin/imageproof color chroma
+reads chroma.shrunk.png reference chroma.png bin/imageproof match chroma.png '{}'
 ncly image shrink srgb.png --json
-reads srgb.shrunk.png reference srgb.png bin/imageproof color srgb
+reads srgb.shrunk.png reference srgb.png bin/imageproof match srgb.png '{}'
 
 # spec: depth
 ncly image shrink deep.png --quality 1 --json
-reads deep.shrunk.png reference deep.png bin/imageproof deep
+reads deep.shrunk.png reference deep.png bin/imageproof match deep.png '{}'
 
 # A lossless WebP fixture is generated with vips; Go's separate WebP decoder
 # compares the lossy copy to the declared original quadrants and ICC bytes.
@@ -210,14 +210,56 @@ exec vips copy photo.png 'photo.webp[lossless,keep=icc]'
 exec bin/imageproof private-webp photo.webp
 # spec: alpha format quality pixels profile
 ncly image shrink photo.webp --json
-reads photo.shrunk.webp reference photo.webp bin/imageproof check 1
+reads photo.shrunk.webp reference photo.webp bin/imageproof match photo.webp '{}'
+
+# R1-F4: genuine multi-image files and every multipart classifier.
+# spec: multipart format
+exec bin/imageproof multipart-fixtures
+stdout 'generated APNG and WebP frame sequences'
+protect two-frames.png two-frames.shrunk.png
+refuses IMAGE_SHRINK_MULTIPART ncly image shrink two-frames.png
+protect two-frames.webp two-frames.shrunk.webp
+refuses IMAGE_SHRINK_MULTIPART ncly image shrink two-frames.webp
+protect animation-chunks.webp animation-chunks.shrunk.webp
+refuses IMAGE_SHRINK_MULTIPART ncly image shrink animation-chunks.webp
+protect animation-flag.webp animation-flag.shrunk.webp
+refuses IMAGE_SHRINK_MULTIPART ncly image shrink animation-flag.webp
+protect two-pictures.jpg two-pictures.shrunk.jpg
+refuses IMAGE_SHRINK_MULTIPART ncly image shrink two-pictures.jpg
+protect mp-index.jpg mp-index.shrunk.jpg
+refuses IMAGE_SHRINK_MULTIPART ncly image shrink mp-index.jpg
+protect concatenated.jpg concatenated.shrunk.jpg
+refuses IMAGE_SHRINK_MULTIPART ncly image shrink concatenated.jpg
+# R1-F5: full decoded content must distinguish successful quality choices.
+# spec: quality options pixels privacy
+exec bin/imageproof quality-fixture
+exec vips copy quality.png 'quality.jpg[Q=100,keep=none]'
+exec bin/imageproof pad-jpeg quality.jpg
+exec vips copy quality.png 'quality.webp[lossless,keep=none]'
+exec bin/imageproof private-webp quality.webp
+ncly image shrink quality.jpg --quality 20 --json
+cp quality.shrunk.jpg quality-low.jpg
+ncly image shrink quality.jpg --quality 95 --force --json
+exec bin/imageproof quality-pair quality.jpg quality-low.jpg quality.shrunk.jpg
+stdout 'higher quality is closer and larger'
+! exec bin/imageproof quality-pair quality.jpg quality.shrunk.jpg quality.shrunk.jpg
+stderr 'quality override is ineffective'
+ncly image shrink quality.webp --quality 20 --json
+cp quality.shrunk.webp quality-low.webp
+ncly image shrink quality.webp --quality 95 --force --json
+exec bin/imageproof quality-pair quality.webp quality-low.webp quality.shrunk.webp
+stdout 'higher quality is closer and larger'
+! exec bin/imageproof quality-pair quality.webp quality.shrunk.webp quality.shrunk.webp
+stderr 'quality override is ineffective'
+exits 2 ncly image shrink quality.jpg --quality 0 --json
+
 
 # spec: geometry
 ncly image shrink large.png --json
-reads large.shrunk.png reference large.png bin/imageproof check 1 '{}' 2048 1024
+reads large.shrunk.png reference large.png bin/imageproof match large.png '{}' 2048
 rm large.shrunk.png
 ncly image shrink large.png --max-side 64 --json
-reads large.shrunk.png reference large.png bin/imageproof check 1 '{}' 64 32
+reads large.shrunk.png reference large.png bin/imageproof match large.png '{}' 64
 
 # spec: not-smaller
 protect tiny.png tiny.shrunk.png
@@ -276,7 +318,7 @@ refuses IMAGE_SHRINK_OUTPUT ncly image shrink photo.png
 refuses IMAGE_SHRINK_OUTPUT ncly image shrink photo.png --force
 rm photo.shrunk.png
 ncly image shrink photo.png --json
-reads -case 'Is a link to the input' photo.shrunk.png reference photo.png bin/imageproof check 1
+reads -case 'Is a link to the input' photo.shrunk.png reference photo.png bin/imageproof match photo.png '{}'
 rm photo.shrunk.png
 exec ln photo.png photo.shrunk.png
 protect photo.png photo.shrunk.png
@@ -286,16 +328,16 @@ rm photo.shrunk.png
 # spec: names
 cp photo.png 'my photo;$(date)[x].PNG'
 ncly image shrink 'my photo;$(date)[x].PNG' --json
-reads 'my photo;$(date)[x].shrunk.PNG' reference photo.png bin/imageproof check 1
+reads 'my photo;$(date)[x].shrunk.PNG' reference photo.png bin/imageproof match photo.png '{}'
 cp photo.png -photo.png
 ncly image shrink -- -photo.png
-reads ./-photo.shrunk.png reference photo.png bin/imageproof check 1
+reads ./-photo.shrunk.png reference photo.png bin/imageproof match photo.png '{}'
 
 # spec: staging publication
 protect photo.png
 env STUB=hold
 holds marker photo.shrunk.png ncly image shrink photo.png
-reads -case 'Temporary file' photo.shrunk.png reference photo.png bin/imageproof check 1
+reads -case 'Temporary file' photo.shrunk.png reference photo.png bin/imageproof match photo.png '{}'
 rm photo.shrunk.png
 
 # spec: race
@@ -447,6 +489,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -667,114 +710,6 @@ func metadataOf(b []byte, format string) ([]byte, bool) {
 	}
 	return profile, sensitive
 }
-func check(name string, orientation int, depth bool, colorMode string) {
-	b := read(name)
-	img, format, e := image.Decode(bytes.NewReader(b))
-	must(e)
-	bounds := img.Bounds()
-	w, h := 64, 32
-	if len(os.Args) >= 6 {
-		w, _ = strconv.Atoi(os.Args[4])
-		h, _ = strconv.Atoi(os.Args[5])
-	}
-	if orientation >= 5 {
-		w, h = h, w
-	}
-	if bounds.Dx() != w || bounds.Dy() != h {
-		panic(fmt.Sprintf("geometry %v, expected %dx%d", bounds, w, h))
-	}
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			sx, sy := x*64/w, y*32/h
-			switch orientation {
-			case 2:
-				sx = 63 - x
-			case 3:
-				sx, sy = 63-x, 31-y
-			case 4:
-				sy = 31 - y
-			case 5:
-				sx, sy = y, x
-			case 6:
-				sx, sy = y, 31-x
-			case 7:
-				sx, sy = 63-y, 31-x
-			case 8:
-				sx, sy = 63-y, x
-			}
-			got := color.NRGBA64Model.Convert(img.At(x, y)).(color.NRGBA64)
-			switch raw := img.(type) {
-			case *image.NRGBA:
-				c := raw.NRGBAAt(x, y)
-				got = color.NRGBA64{R: uint16(c.R) * 257, G: uint16(c.G) * 257, B: uint16(c.B) * 257, A: uint16(c.A) * 257}
-			case *image.NRGBA64:
-				got = raw.NRGBA64At(x, y)
-			}
-			if depth {
-				if got.R != 0x1234 || got.G != 0x5678 || got.B != 0x9abc || got.A != 65535 {
-					panic("16-bit sample changed")
-				}
-				continue
-			}
-			want := color.NRGBA64{R: 220 * 257, A: 65535}
-			if sx >= 32 {
-				want = color.NRGBA64{G: 180 * 257, A: 65535}
-			}
-			if sy >= 16 {
-				want = color.NRGBA64{B: 200 * 257, A: 128 * 257}
-				if format == "jpeg" {
-					want.A = 65535
-				}
-			}
-			tolerance := 0
-			if len(os.Args) >= 6 {
-				tolerance = 2 * 257
-			}
-			if format != "png" {
-				tolerance = 28 * 257
-			}
-			if sx < 3 || sx > 60 || sy < 3 || sy > 28 || sx >= 29 && sx <= 34 || sy >= 13 && sy <= 18 {
-				if format != "png" || len(os.Args) >= 6 {
-					continue
-				}
-			}
-			for _, pair := range [][2]uint16{{got.R, want.R}, {got.G, want.G}, {got.B, want.B}, {got.A, want.A}} {
-				d := int(pair[0]) - int(pair[1])
-				if d < 0 {
-					d = -d
-				}
-				if d > tolerance {
-					panic(fmt.Sprintf("pixel %d,%d differs: %v %v", x, y, got, want))
-				}
-			}
-		}
-	}
-	profile, sensitive := metadataOf(b, format)
-	if sensitive || bytes.Contains(b, []byte(private)) {
-		panic("descriptive metadata retained")
-	}
-	wantProfile := icc()
-	if colorMode != "" {
-		wantProfile = nil
-	}
-	if !bytes.Equal(profile, wantProfile) {
-		panic("ICC profile changed")
-	}
-	gamma := []byte{0, 1, 0x86, 0xa0}
-	if colorMode == "srgb" {
-		gamma = []byte{0, 0, 0xb1, 0x8f}
-	}
-	if format == "png" && !bytes.Contains(b, chunk("gAMA", gamma)) {
-		panic("gamma changed")
-	}
-	if colorMode == "srgb" && !bytes.Contains(b, chunk("sRGB", []byte{2})) {
-		panic("sRGB intent changed")
-	}
-	if colorMode == "chroma" && !bytes.Contains(b, chunk("cHRM", chroma())) {
-		panic("chromaticity changed")
-	}
-	fmt.Println("complete pixels, orientation, alpha, ICC and privacy match")
-}
 func chroma() []byte {
 	var b bytes.Buffer
 	for _, v := range []uint32{31270, 32900, 68000, 32000, 30000, 60000, 15000, 6000} {
@@ -828,6 +763,19 @@ func main() {
 			binary.BigEndian.PutUint32(profile[136:], uint32(len(profile)+16))
 		}
 		attachProfile(name, profile, 1)
+	case "multipart-fixtures":
+		multipartFixtures()
+	case "quality-fixture":
+		qualityFixture()
+	case "quality-pair":
+		qualityPair(os.Args[2], os.Args[3], os.Args[4])
+	case "pad-jpeg":
+		b := read(os.Args[2])
+		d := bytes.Repeat([]byte(private), 100)
+		seg := []byte{255, 254}
+		seg = binary.BigEndian.AppendUint16(seg, uint16(len(d)+2))
+		seg = append(seg, d...)
+		write(os.Args[2], append(append(append([]byte{}, b[:2]...), seg...), b[2:]...))
 	case "model-fixtures":
 		modelFixtures()
 	case "attach-model":
@@ -837,11 +785,9 @@ func main() {
 	case "declarations":
 		makeDeclarations()
 	case "bad-pixels":
-		badPixels(os.Args[2],os.Args[3])
-	case "fixture":
+		badPixels(os.Args[2], os.Args[3])
+	case "fixture", "match":
 		compareFixture(os.Args[2], os.Args[3])
-	case "color":
-		check(os.Args[3], 1, false, os.Args[2])
 	case "make":
 		makeColor("chroma.png", false)
 		makeColor("srgb.png", true)
@@ -864,12 +810,6 @@ func main() {
 		b.Write(chunk("IEND", nil))
 		write("tiny.png", b.Bytes())
 		write("profile.icc", icc())
-	case "check":
-		n, e := strconv.Atoi(os.Args[2])
-		must(e)
-		check(os.Args[3], n, false, "")
-	case "deep":
-		check(os.Args[2], 1, true, "")
 	case "copy":
 		write(os.Args[3], read(os.Args[2]))
 	case "hash":
@@ -933,7 +873,9 @@ func main() {
 }
 
 // compareFixture uses the supplied input as an independent pixel reference.
-// Four area samples per output pixel allow bounded encoder/resampler error.
+// Four area samples per output pixel give an independent box reference.
+// Every pixel is checked. Per-pixel bounds cover kernel ringing and lossy
+// coding, while tighter whole-image bounds reject accumulated distortion.
 func compareFixture(input, output string) {
 	inBytes, outBytes := read(input), read(output)
 	src, format, err := image.Decode(bytes.NewReader(inBytes))
@@ -979,6 +921,7 @@ func compareFixture(input, output string) {
 	if dw < 1 || dh < 1 || dw > ow || dh > oh || !near(float64(dw), float64(ow)*scale) || !near(float64(dh), float64(oh)*scale) {
 		panic("fixture geometry changed")
 	}
+	resized := dw != ow || dh != oh
 	var differences [4]uint64
 	for y := 0; y < dh; y++ {
 		for x := 0; x < dw; x++ {
@@ -1003,7 +946,7 @@ func compareFixture(input, output string) {
 					case 8:
 						sx, sy = sw-1-b, a
 					}
-					r, g, bv, aValue := src.At(sx, sy).RGBA()
+					r, g, bv, aValue := referenceSample(src, sx, sy)
 					for c, v := range []uint32{r, g, bv, aValue} {
 						expected[c] += uint64(v)
 					}
@@ -1016,17 +959,37 @@ func compareFixture(input, output string) {
 				if d < 0 {
 					d = -d
 				}
+				// Exact PNG copies retain samples, allowing only a few
+				// 16-bit unassociated-alpha rounding units. Resampling uses
+				// a different kernel than this box reference. Lossy chroma
+				// coding also blends boundaries, hence the bounded margin.
+				limit := int64(8)
+				if resized || format != "png" {
+					limit = 40 * 257
+				}
+				if c == 3 && resized {
+					limit = 20 * 257
+				}
+				if c == 3 && !resized {
+					limit = 8
+				}
+				if d > limit {
+					panic(fmt.Sprintf("fixture pixel %d,%d channel %d differs by %d, bound %d", x, y, c, d, limit))
+				}
 				differences[c] += uint64(d)
 			}
 		}
 	}
 	for c, d := range differences {
-		limit := uint64(24 * 257)
+		limit := uint64(8 * 257)
+		if format != "png" {
+			limit = 16 * 257
+		}
 		if c == 3 {
-			limit = 8 * 257
+			limit = 2 * 257
 		}
 		if d > uint64(dw)*uint64(dh)*limit {
-			panic("fixture pixel content differs from the oriented source")
+			panic(fmt.Sprintf("fixture channel %d mean difference %.3f, bound %.3f", c, float64(d)/float64(dw*dh*257), float64(limit)/257))
 		}
 	}
 	if format == "png" {
@@ -1044,7 +1007,7 @@ func compareFixture(input, output string) {
 			pos += 12 + n
 		}
 	}
-	fmt.Println("fixture pixels, geometry, profile and privacy match")
+	fmt.Println("complete pixels, orientation, alpha, ICC and privacy match")
 }
 
 func fixtureOrientation(data []byte, format string) int {
@@ -1399,9 +1362,229 @@ func attachProfile(name string, profile []byte, orient int) {
 }
 
 func badPixels(input, output string) {
- b:=read(input); src,_,e:=image.Decode(bytes.NewReader(b));must(e); dst:=image.NewNRGBA64(src.Bounds())
- for y:=0;y<dst.Bounds().Dy();y++ { for x:=0;x<dst.Bounds().Dx();x++ { dst.Set(x,y,src.At(x,y)); if x<3 || x>60 || y<3 || y>28 || x>=29 && x<=34 || y>=13 && y<=18 { dst.Set(x,y,color.NRGBA64{A:65535}) } } }
- var encoded bytes.Buffer;must(png.Encode(&encoded,dst));data:=encoded.Bytes();var extra []byte
- for pos:=8;pos<len(b); { n:=int(binary.BigEndian.Uint32(b[pos:]));k:=string(b[pos+4:pos+8]);if k=="iCCP" || k=="gAMA" || k=="cHRM" || k=="sRGB" || k=="cICP" { extra=append(extra,b[pos:pos+n+12]...) };pos+=n+12 }
- write(output,append(append(append([]byte{},data[:33]...),extra...),data[33:]...))
+	b := read(input)
+	src, _, e := image.Decode(bytes.NewReader(b))
+	must(e)
+	dst := image.NewNRGBA64(src.Bounds())
+	for y := 0; y < dst.Bounds().Dy(); y++ {
+		for x := 0; x < dst.Bounds().Dx(); x++ {
+			dst.Set(x, y, src.At(x, y))
+			if x < 3 || x > 60 || y < 3 || y > 28 || x >= 29 && x <= 34 || y >= 13 && y <= 18 {
+				dst.Set(x, y, color.NRGBA64{A: 65535})
+			}
+		}
+	}
+	var encoded bytes.Buffer
+	must(png.Encode(&encoded, dst))
+	data := encoded.Bytes()
+	var extra []byte
+	for pos := 8; pos < len(b); {
+		n := int(binary.BigEndian.Uint32(b[pos:]))
+		k := string(b[pos+4 : pos+8])
+		if k == "iCCP" || k == "gAMA" || k == "cHRM" || k == "sRGB" || k == "cICP" {
+			extra = append(extra, b[pos:pos+n+12]...)
+		}
+		pos += n + 12
+	}
+	write(output, append(append(append([]byte{}, data[:33]...), extra...), data[33:]...))
+}
+
+func multipartFixtures() {
+	// A genuine two-frame APNG, with sequence numbers, frame controls and
+	// independent compressed frame payloads. The still control is photo.png.
+	b := read("photo.png")
+	var chunks [][]byte
+	for p := 8; p < len(b); {
+		n := int(binary.BigEndian.Uint32(b[p:]))
+		chunks = append(chunks, bytes.Clone(b[p:p+n+12]))
+		p += n + 12
+	}
+	control := func(seq uint32) []byte {
+		d := make([]byte, 26)
+		binary.BigEndian.PutUint32(d, seq)
+		binary.BigEndian.PutUint32(d[4:], 64)
+		binary.BigEndian.PutUint32(d[8:], 32)
+		binary.BigEndian.PutUint16(d[20:], 1)
+		binary.BigEndian.PutUint16(d[22:], 10)
+		return chunk("fcTL", d)
+	}
+	out := append([]byte{}, b[:8]...)
+	var frame []byte
+	for _, c := range chunks {
+		kind := string(c[4:8])
+		if kind == "IEND" {
+			out = append(out, control(1)...)
+			out = append(out, chunk("fdAT", append([]byte{0, 0, 0, 2}, frame...))...)
+		}
+		out = append(out, c...)
+		if kind == "IHDR" {
+			out = append(out, chunk("acTL", []byte{0, 0, 0, 2, 0, 0, 0, 0})...)
+			out = append(out, control(0)...)
+		}
+		if kind == "IDAT" {
+			frame = append(frame, c[8:len(c)-4]...)
+		}
+	}
+	write("two-frames.png", out)
+	// Two real WebP frame bitstreams in ANMF chunks, with valid RIFF sizes.
+	w := read("photo.webp")
+	var pixels []byte
+	for p := 12; p < len(w); {
+		n := int(binary.LittleEndian.Uint32(w[p+4:]))
+		k := string(w[p : p+4])
+		if k == "VP8L" || k == "VP8 " || k == "ALPH" {
+			pixels = append(pixels, w[p:p+8+n+n%2]...)
+		}
+		p += 8 + n + n%2
+	}
+	riffChunk := func(k string, d []byte) []byte {
+		out := append([]byte(k), 0, 0, 0, 0)
+		binary.LittleEndian.PutUint32(out[4:], uint32(len(d)))
+		out = append(out, d...)
+		if len(d)%2 != 0 {
+			out = append(out, 0)
+		}
+		return out
+	}
+	header := []byte{0x12, 0, 0, 0, 63, 0, 0, 31, 0, 0}
+	frameHeader := make([]byte, 16)
+	frameHeader[6], frameHeader[9], frameHeader[12] = 63, 31, 100
+	frameChunk := riffChunk("ANMF", append(frameHeader, pixels...))
+	w = append([]byte("RIFF\x00\x00\x00\x00WEBP"), riffChunk("VP8X", header)...)
+	w = append(w, riffChunk("ANIM", make([]byte, 6))...)
+	w = append(w, frameChunk...)
+	w = append(w, frameChunk...)
+	binary.LittleEndian.PutUint32(w[4:], uint32(len(w)-8))
+	write("two-frames.webp", w)
+	w[20] &^= 2
+	write("animation-chunks.webp", w)
+	w = read("photo.webp")
+	w[20] |= 2
+	write("animation-flag.webp", w)
+	// A real MPO MP Index points to both JPEG images. TIFF offsets are
+	// relative to the TIFF header, while the first image's offset is zero.
+	j1, j2 := read("orientation-1.jpg"), read("orientation-2.jpg")
+	tiff := make([]byte, 82)
+	copy(tiff, "II\x2a\x00\x08\x00\x00\x00")
+	binary.LittleEndian.PutUint16(tiff[8:], 3)
+	entry := func(at int, tag, typ uint16, count, value uint32) {
+		binary.LittleEndian.PutUint16(tiff[at:], tag)
+		binary.LittleEndian.PutUint16(tiff[at+2:], typ)
+		binary.LittleEndian.PutUint32(tiff[at+4:], count)
+		binary.LittleEndian.PutUint32(tiff[at+8:], value)
+	}
+	entry(10, 0xb000, 7, 4, 0x30303130)
+	entry(22, 0xb001, 4, 1, 2)
+	entry(34, 0xb002, 7, 32, 50)
+	segmentSize := 4 + 4 + len(tiff)
+	firstSize := len(j1) + segmentSize
+	binary.LittleEndian.PutUint32(tiff[50:], 0x20030000)
+	binary.LittleEndian.PutUint32(tiff[54:], uint32(firstSize))
+	binary.LittleEndian.PutUint32(tiff[66:], 0x00030000)
+	binary.LittleEndian.PutUint32(tiff[70:], uint32(len(j2)))
+	binary.LittleEndian.PutUint32(tiff[74:], uint32(firstSize-10))
+	segment := []byte{255, 226}
+	segment = binary.BigEndian.AppendUint16(segment, uint16(6+len(tiff)))
+	segment = append(segment, []byte("MPF\x00")...)
+	segment = append(segment, tiff...)
+	mpf := append(append(append([]byte{}, j1[:2]...), segment...), j1[2:]...)
+	write("mp-index.jpg", mpf)
+	write("two-pictures.jpg", append(mpf, j2...))
+	write("concatenated.jpg", append(bytes.Clone(j1), j2...))
+	// Independent fixture checks establish two frame records and MP offsets.
+	if len(frame) == 0 || len(pixels) == 0 || binary.LittleEndian.Uint32(tiff[74:])+10 != uint32(firstSize) {
+		panic("invalid generated multipart fixture")
+	}
+	fmt.Println("generated APNG and WebP frame sequences, MPO index and concatenated JPEG pair")
+}
+
+func qualityFixture() {
+	p := image.NewNRGBA(image.Rect(0, 0, 96, 64))
+	for y := 0; y < 64; y++ {
+		for x := 0; x < 96; x++ {
+			p.SetNRGBA(x, y, color.NRGBA{R: byte((x*17 + y*3) % 256), G: byte((x*3 + y*19) % 256), B: byte((x*7 + y*11) % 256), A: 255})
+		}
+	}
+	var b bytes.Buffer
+	must(png.Encode(&b, p))
+	write("quality.png", b.Bytes())
+}
+
+func qualityPair(input, low, high string) {
+	src, format, e := image.Decode(bytes.NewReader(read(input)))
+	must(e)
+	metric := func(name string) float64 {
+		b := read(name)
+		img, f, e := image.Decode(bytes.NewReader(b))
+		must(e)
+		if f != format || img.Bounds() != src.Bounds() {
+			panic("quality output geometry or format changed")
+		}
+		profile, sensitive := metadataOf(b, f)
+		want, _ := metadataOf(read(input), format)
+		if sensitive || !bytes.Equal(profile, want) {
+			panic("quality output privacy or profile changed")
+		}
+		var squared uint64
+		for y := 0; y < img.Bounds().Dy(); y++ {
+			for x := 0; x < img.Bounds().Dx(); x++ {
+				r, g, b, _ := referenceSample(src, x, y)
+				rr, gg, bb, _ := img.At(x, y).RGBA()
+				for _, p := range [][2]uint32{{r, rr}, {g, gg}, {b, bb}} {
+					d := int64(p[0]/257) - int64(p[1]/257)
+					squared += uint64(d * d)
+				}
+			}
+		}
+		return float64(squared) / float64(img.Bounds().Dx()*img.Bounds().Dy()*3)
+	}
+	lo, hi := metric(low), metric(high)
+	if hi >= lo*.8 || hi > 2000 || lo > 6000 || len(read(high)) <= len(read(low)) {
+		panic(fmt.Sprintf("quality override is ineffective: MSE low %.3f high %.3f", lo, hi))
+	}
+	fmt.Printf("quality output pixels: MSE low %.3f high %.3f; higher quality is closer and larger\n", lo, hi)
+}
+
+// libjpeg uses centered bilinear chroma expansion. Go's YCbCr.At uses nearest
+// chroma, so an independent JPEG reference must expand decoded chroma itself
+// rather than blame the saver for a different decoder's boundary convention.
+func referenceSample(src image.Image, x, y int) (uint32, uint32, uint32, uint32) {
+	p, ok := src.(*image.YCbCr)
+	if !ok {
+		return src.At(x, y).RGBA()
+	}
+	hx, vy := 1, 1
+	switch p.SubsampleRatio {
+	case image.YCbCrSubsampleRatio422:
+		hx = 2
+	case image.YCbCrSubsampleRatio420:
+		hx, vy = 2, 2
+	case image.YCbCrSubsampleRatio440:
+		vy = 2
+	case image.YCbCrSubsampleRatio411:
+		hx = 4
+	case image.YCbCrSubsampleRatio410:
+		hx, vy = 4, 2
+	}
+	fx, fy := (float64(x)+.5)/float64(hx)-.5, (float64(y)+.5)/float64(vy)-.5
+	ix, iy := int(math.Floor(fx)), int(math.Floor(fy))
+	dx, dy := fx-math.Floor(fx), fy-math.Floor(fy)
+	var cb, cr float64
+	for j := 0; j < 2; j++ {
+		for i := 0; i < 2; i++ {
+			xx, yy := max(0, min((p.Rect.Dx()-1)/hx, ix+i)), max(0, min((p.Rect.Dy()-1)/vy, iy+j))
+			wx, wy := 1-dx, 1-dy
+			if i == 1 {
+				wx = dx
+			}
+			if j == 1 {
+				wy = dy
+			}
+			at := p.COffset(xx*hx, yy*vy)
+			cb += float64(p.Cb[at]) * wx * wy
+			cr += float64(p.Cr[at]) * wx * wy
+		}
+	}
+	r, g, b := color.YCbCrToRGB(p.Y[p.YOffset(x, y)], byte(math.Round(cb)), byte(math.Round(cr)))
+	return uint32(r) * 257, uint32(g) * 257, uint32(b) * 257, 65535
 }

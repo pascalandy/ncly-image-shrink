@@ -47,7 +47,7 @@ ncly image shrink "$input" --json --no-input
 if [[ -n "$fixture" ]]; then
 	imageproof fixture "$input" "$output"
 else
-	imageproof check 1 "$output"
+	imageproof match "$input" "$output"
 fi
 [[ "$(fct_sum "$input")" == "$input_before" ]] || fct_die "the input changed"
 if [[ -n "$fixture" ]]; then
@@ -64,7 +64,7 @@ ncly image shrink "$input" --force --json --no-input
 if [[ -n "$fixture" ]]; then
 	imageproof fixture "$input" "$output"
 else
-	imageproof check 1 "$output"
+	imageproof match "$input" "$output"
 fi
 imageproof clean
 cd - > /dev/null

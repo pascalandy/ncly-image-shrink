@@ -203,7 +203,7 @@ func shrink(ctx context.Context, call extension.Call) (outcome contract.Outcome)
 	options := "keep=icc"
 	switch p.format {
 	case "jpeg":
-		options += ",optimize_coding,Q=" + strconv.Itoa(p.quality)
+		options += ",optimize_coding,subsample_mode=off,Q=" + strconv.Itoa(p.quality)
 	case "webp":
 		options += ",Q=" + strconv.Itoa(p.quality)
 	case "png":
