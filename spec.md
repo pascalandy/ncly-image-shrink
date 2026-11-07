@@ -54,7 +54,6 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | `privacy` | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata |
 | `publication` | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process |
 | `alpha` | PNG and WebP retain transparency |
-| `pixels` | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing |
 | `profile` | The complete ICC color profile is retained |
 
 ## Case matrix
@@ -92,4 +91,8 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 
 ## Open lines
 
-None. Round 3 selects the remaining input, transparency, profile and independent-content promises for complete family regression checks.
+The final delta review found that the box-relative error bounds reject faithful odd-factor reductions. The complete-content promise stays unchanged.
+
+| ID | Command | Part | Case | Code |
+|---|---|---|---|---|
+| `pixels` | `ncly image shrink` | Acceptance | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing | - |
