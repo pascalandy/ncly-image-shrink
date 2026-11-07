@@ -25,6 +25,164 @@ exec bin/imageproof corrupt-display photo.shrunk.png bad-gamma-output.png gamma
 reads photo.shrunk.png reference bad-gamma-output.png bin/imageproof match photo.png '{}'
 
 
+# R2-F1/R1-F2: all PNG tRNS representations, precision and geometry.
+# spec: alpha profile pixels orientation depth
+exec bin/imageproof trns-fixture trns-0-1-1.png 1 0 1
+ncly image shrink trns-0-1-1.png --json
+exec bin/imageproof match trns-0-1-1.png trns-0-1-1.shrunk.png
+rm trns-0-1-1.shrunk.png
+ncly image shrink trns-0-1-1.png --max-side 31 --json
+exec bin/imageproof match trns-0-1-1.png trns-0-1-1.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-1-2.png 1 0 2
+ncly image shrink trns-0-1-2.png --json
+exec bin/imageproof match trns-0-1-2.png trns-0-1-2.shrunk.png
+rm trns-0-1-2.shrunk.png
+ncly image shrink trns-0-1-2.png --max-side 31 --json
+exec bin/imageproof match trns-0-1-2.png trns-0-1-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-1-6.png 1 0 6
+ncly image shrink trns-0-1-6.png --json
+exec bin/imageproof match trns-0-1-6.png trns-0-1-6.shrunk.png
+rm trns-0-1-6.shrunk.png
+ncly image shrink trns-0-1-6.png --max-side 31 --json
+exec bin/imageproof match trns-0-1-6.png trns-0-1-6.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-2-1.png 2 0 1
+ncly image shrink trns-0-2-1.png --json
+exec bin/imageproof match trns-0-2-1.png trns-0-2-1.shrunk.png
+rm trns-0-2-1.shrunk.png
+ncly image shrink trns-0-2-1.png --max-side 31 --json
+exec bin/imageproof match trns-0-2-1.png trns-0-2-1.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-2-2.png 2 0 2
+ncly image shrink trns-0-2-2.png --json
+exec bin/imageproof match trns-0-2-2.png trns-0-2-2.shrunk.png
+rm trns-0-2-2.shrunk.png
+ncly image shrink trns-0-2-2.png --max-side 31 --json
+exec bin/imageproof match trns-0-2-2.png trns-0-2-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-2-6.png 2 0 6
+ncly image shrink trns-0-2-6.png --json
+exec bin/imageproof match trns-0-2-6.png trns-0-2-6.shrunk.png
+rm trns-0-2-6.shrunk.png
+ncly image shrink trns-0-2-6.png --max-side 31 --json
+exec bin/imageproof match trns-0-2-6.png trns-0-2-6.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-4-1.png 4 0 1
+ncly image shrink trns-0-4-1.png --json
+exec bin/imageproof match trns-0-4-1.png trns-0-4-1.shrunk.png
+rm trns-0-4-1.shrunk.png
+ncly image shrink trns-0-4-1.png --max-side 31 --json
+exec bin/imageproof match trns-0-4-1.png trns-0-4-1.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-4-2.png 4 0 2
+ncly image shrink trns-0-4-2.png --json
+exec bin/imageproof match trns-0-4-2.png trns-0-4-2.shrunk.png
+rm trns-0-4-2.shrunk.png
+ncly image shrink trns-0-4-2.png --max-side 31 --json
+exec bin/imageproof match trns-0-4-2.png trns-0-4-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-4-6.png 4 0 6
+ncly image shrink trns-0-4-6.png --json
+exec bin/imageproof match trns-0-4-6.png trns-0-4-6.shrunk.png
+rm trns-0-4-6.shrunk.png
+ncly image shrink trns-0-4-6.png --max-side 31 --json
+exec bin/imageproof match trns-0-4-6.png trns-0-4-6.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-8-1.png 8 0 1
+ncly image shrink trns-0-8-1.png --json
+exec bin/imageproof match trns-0-8-1.png trns-0-8-1.shrunk.png
+exec bin/imageproof wrong-pixels trns-0-8-1.shrunk.png opaque-bad.png opaque
+reads trns-0-8-1.shrunk.png reference opaque-bad.png bin/imageproof match trns-0-8-1.png '{}'
+rm trns-0-8-1.shrunk.png
+ncly image shrink trns-0-8-1.png --max-side 31 --json
+exec bin/imageproof match trns-0-8-1.png trns-0-8-1.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-8-2.png 8 0 2
+ncly image shrink trns-0-8-2.png --json
+exec bin/imageproof match trns-0-8-2.png trns-0-8-2.shrunk.png
+rm trns-0-8-2.shrunk.png
+ncly image shrink trns-0-8-2.png --max-side 31 --json
+exec bin/imageproof match trns-0-8-2.png trns-0-8-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-8-6.png 8 0 6
+ncly image shrink trns-0-8-6.png --json
+exec bin/imageproof match trns-0-8-6.png trns-0-8-6.shrunk.png
+rm trns-0-8-6.shrunk.png
+ncly image shrink trns-0-8-6.png --max-side 31 --json
+exec bin/imageproof match trns-0-8-6.png trns-0-8-6.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-16-1.png 16 0 1
+ncly image shrink trns-0-16-1.png --json
+exec bin/imageproof match trns-0-16-1.png trns-0-16-1.shrunk.png
+rm trns-0-16-1.shrunk.png
+ncly image shrink trns-0-16-1.png --max-side 31 --json
+exec bin/imageproof match trns-0-16-1.png trns-0-16-1.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-16-2.png 16 0 2
+ncly image shrink trns-0-16-2.png --json
+exec bin/imageproof match trns-0-16-2.png trns-0-16-2.shrunk.png
+rm trns-0-16-2.shrunk.png
+ncly image shrink trns-0-16-2.png --max-side 31 --json
+exec bin/imageproof match trns-0-16-2.png trns-0-16-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-0-16-6.png 16 0 6
+ncly image shrink trns-0-16-6.png --json
+exec bin/imageproof match trns-0-16-6.png trns-0-16-6.shrunk.png
+rm trns-0-16-6.shrunk.png
+ncly image shrink trns-0-16-6.png --max-side 31 --json
+exec bin/imageproof match trns-0-16-6.png trns-0-16-6.shrunk.png 31
+exec bin/imageproof trns-fixture trns-2-8-2.png 8 2 2
+ncly image shrink trns-2-8-2.png --json
+exec bin/imageproof match trns-2-8-2.png trns-2-8-2.shrunk.png
+rm trns-2-8-2.shrunk.png
+ncly image shrink trns-2-8-2.png --max-side 31 --json
+exec bin/imageproof match trns-2-8-2.png trns-2-8-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-2-16-2.png 16 2 2
+ncly image shrink trns-2-16-2.png --json
+exec bin/imageproof match trns-2-16-2.png trns-2-16-2.shrunk.png
+rm trns-2-16-2.shrunk.png
+ncly image shrink trns-2-16-2.png --max-side 31 --json
+exec bin/imageproof match trns-2-16-2.png trns-2-16-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-3-1-2.png 1 3 2
+ncly image shrink trns-3-1-2.png --json
+exec bin/imageproof match trns-3-1-2.png trns-3-1-2.shrunk.png
+rm trns-3-1-2.shrunk.png
+ncly image shrink trns-3-1-2.png --max-side 31 --json
+exec bin/imageproof match trns-3-1-2.png trns-3-1-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-3-2-2.png 2 3 2
+ncly image shrink trns-3-2-2.png --json
+exec bin/imageproof match trns-3-2-2.png trns-3-2-2.shrunk.png
+rm trns-3-2-2.shrunk.png
+ncly image shrink trns-3-2-2.png --max-side 31 --json
+exec bin/imageproof match trns-3-2-2.png trns-3-2-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-3-4-2.png 4 3 2
+ncly image shrink trns-3-4-2.png --json
+exec bin/imageproof match trns-3-4-2.png trns-3-4-2.shrunk.png
+rm trns-3-4-2.shrunk.png
+ncly image shrink trns-3-4-2.png --max-side 31 --json
+exec bin/imageproof match trns-3-4-2.png trns-3-4-2.shrunk.png 31
+exec bin/imageproof trns-fixture trns-3-8-2.png 8 3 2
+ncly image shrink trns-3-8-2.png --json
+exec bin/imageproof match trns-3-8-2.png trns-3-8-2.shrunk.png
+rm trns-3-8-2.shrunk.png
+ncly image shrink trns-3-8-2.png --max-side 31 --json
+exec bin/imageproof match trns-3-8-2.png trns-3-8-2.shrunk.png 31
+# R1-F3: complete high-frequency footprints, including fractional edges.
+# spec: pixels alpha depth orientation profile
+exec bin/imageproof frequency-fixture stripes.png 256 128 1 8 opaque
+ncly image shrink stripes.png --max-side 64 --json
+exec bin/imageproof match stripes.png stripes.shrunk.png 64
+exec bin/imageproof wrong-pixels stripes.shrunk.png stripes-bad.png black
+reads stripes.shrunk.png reference stripes-bad.png bin/imageproof match stripes.png '{}' 64
+exec bin/imageproof frequency-fixture stripes-turn.png 256 128 6 8 opaque
+ncly image shrink stripes-turn.png --max-side 64 --json
+exec bin/imageproof match stripes-turn.png stripes-turn.shrunk.png 64
+exec bin/imageproof wrong-pixels stripes-turn.shrunk.png stripes-turn-bad.png black
+reads stripes-turn.shrunk.png reference stripes-turn-bad.png bin/imageproof match stripes-turn.png '{}' 64
+exec bin/imageproof frequency-fixture stripes-wide.png 256 128 1 16 opaque
+ncly image shrink stripes-wide.png --max-side 64 --json
+exec bin/imageproof match stripes-wide.png stripes-wide.shrunk.png 64
+exec bin/imageproof wrong-pixels stripes-wide.shrunk.png stripes-wide-bad.png black
+reads stripes-wide.shrunk.png reference stripes-wide-bad.png bin/imageproof match stripes-wide.png '{}' 64
+exec bin/imageproof frequency-fixture stripes-alpha.png 256 128 1 8 alpha
+ncly image shrink stripes-alpha.png --max-side 64 --json
+exec bin/imageproof match stripes-alpha.png stripes-alpha.shrunk.png 64
+exec bin/imageproof wrong-pixels stripes-alpha.shrunk.png stripes-alpha-bad.png transparent
+reads stripes-alpha.shrunk.png reference stripes-alpha-bad.png bin/imageproof match stripes-alpha.png '{}' 64
+exec bin/imageproof frequency-fixture stripes-fraction.png 257 131 6 16 alpha
+ncly image shrink stripes-fraction.png --max-side 63 --json
+exec bin/imageproof match stripes-fraction.png stripes-fraction.shrunk.png 63
+exec bin/imageproof wrong-pixels stripes-fraction.shrunk.png stripes-fraction-bad.png transparent
+reads stripes-fraction.shrunk.png reference stripes-fraction-bad.png bin/imageproof match stripes-fraction.png '{}' 63
+
 # The exact manifest example proves real byte saving and removal of its XMP.
 # spec: pixels format smaller privacy profile alpha
 ncly image shrink example.webp --json
@@ -283,6 +441,22 @@ ncly image shrink webp-orientation-7.webp --json
 exec bin/imageproof match webp-orientation-7.webp webp-orientation-7.shrunk.webp
 ncly image shrink webp-orientation-8.webp --json
 exec bin/imageproof match webp-orientation-8.webp webp-orientation-8.shrunk.webp
+
+# R2-F2: a declared empty profile differs from no declaration.
+# spec: input-invalid profile
+exec bin/imageproof empty-profiles
+protect empty-icc.png empty-icc.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink empty-icc.png
+! exec bin/imageproof match empty-icc.png photo.shrunk.png
+stderr 'invalid declared ICC'
+protect empty-icc.jpg empty-icc.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink empty-icc.jpg
+! exec bin/imageproof match empty-icc.jpg orientation-1.shrunk.jpg
+stderr 'invalid declared ICC'
+protect empty-icc.webp empty-icc.shrunk.webp
+refuses IMAGE_SHRINK_INPUT ncly image shrink empty-icc.webp
+! exec bin/imageproof match empty-icc.webp photo.shrunk.webp
+stderr 'invalid declared ICC'
 
 # R1-F4: genuine multi-image files and every multipart classifier.
 # spec: multipart format
@@ -1016,6 +1190,26 @@ func main() {
 		}
 		write("exif-after-pixels.png", out.Bytes())
 		write("exif-duplicate.png", append(append(append([]byte{}, b[:33]...), exifBlock...), b[33:]...))
+	case "trns-fixture":
+		depth, e := strconv.Atoi(os.Args[3])
+		must(e)
+		model, e := strconv.Atoi(os.Args[4])
+		must(e)
+		orient, e := strconv.Atoi(os.Args[5])
+		must(e)
+		transparencyFixture(os.Args[2], byte(depth), byte(model), orient)
+	case "frequency-fixture":
+		w, e := strconv.Atoi(os.Args[3])
+		must(e)
+		h, e := strconv.Atoi(os.Args[4])
+		must(e)
+		o, e := strconv.Atoi(os.Args[5])
+		must(e)
+		frequencyFixture(os.Args[2], w, h, o, os.Args[6] == "16", os.Args[7] == "alpha")
+	case "wrong-pixels":
+		wrongPixels(os.Args[2], os.Args[3], os.Args[4])
+	case "empty-profiles":
+		emptyProfiles()
 	case "declarations":
 		makeDeclarations()
 	case "bad-pixels":
@@ -1950,4 +2144,170 @@ func corruptDisplay(input, output, kind string) {
 		p += n + 12
 	}
 	write(output, out.Bytes())
+}
+
+func transparencyFixture(name string, depth, model byte, orient int) {
+	const width, height = 64, 32
+	channels := 1
+	if model == 2 {
+		channels = 3
+	}
+	var raw bytes.Buffer
+	for y := 0; y < height; y++ {
+		row := make([]byte, 1+(width*channels*int(depth)+7)/8)
+		for x := 0; x < width; x++ {
+			value := uint16(0)
+			if x >= width/2 {
+				value = uint16((uint32(1) << depth) - 1)
+				if model == 3 {
+					value = 1
+				}
+			}
+			for c := 0; c < channels; c++ {
+				at := x*channels + c
+				if depth == 16 {
+					binary.BigEndian.PutUint16(row[1+2*at:], value)
+				} else if depth == 8 {
+					row[1+at] = byte(value)
+				} else {
+					row[1+at/(8/int(depth))] |= byte(value) << uint(8-int(depth)*(at%(8/int(depth))+1))
+				}
+			}
+		}
+		raw.Write(row)
+	}
+	var compressed bytes.Buffer
+	z := zlib.NewWriter(&compressed)
+	_, e := z.Write(raw.Bytes())
+	must(e)
+	must(z.Close())
+	header := make([]byte, 13)
+	binary.BigEndian.PutUint32(header, width)
+	binary.BigEndian.PutUint32(header[4:], height)
+	header[8], header[9] = depth, model
+	profile := icc()
+	if model == 0 {
+		profile = modelICC("GRAY")
+	}
+	var profileData bytes.Buffer
+	z = zlib.NewWriter(&profileData)
+	_, e = z.Write(profile)
+	must(e)
+	must(z.Close())
+	out := []byte("\x89PNG\r\n\x1a\n")
+	out = append(out, chunk("IHDR", header)...)
+	out = append(out, chunk("iCCP", append([]byte("Generated\x00\x00"), profileData.Bytes()...))...)
+	out = append(out, chunk("eXIf", exif(uint16(orient)))...)
+	out = append(out, chunk("tEXt", bytes.Repeat([]byte(private), 100))...)
+	trns := []byte{0, 0}
+	if model == 3 {
+		out = append(out, chunk("PLTE", []byte{0, 0, 0, 255, 255, 255})...)
+		trns = []byte{0, 255}
+	}
+	if model == 2 {
+		trns = make([]byte, 6)
+	}
+	out = append(out, chunk("tRNS", trns)...)
+	out = append(out, chunk("IDAT", compressed.Bytes()...)...)
+	out = append(out, chunk("IEND", nil)...)
+	write(name, out)
+}
+
+func frequencyFixture(name string, w, h, orient int, wide, alpha bool) {
+	p := image.NewNRGBA64(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			c := color.NRGBA64{A: 65535}
+			if x%2 == 0 {
+				c.R, c.G, c.B = 65535, 65535, 65535
+			} else if alpha {
+				c.A = 0
+			}
+			p.SetNRGBA64(x, y, c)
+		}
+	}
+	var src image.Image = p
+	if !wide {
+		n := image.NewNRGBA(p.Bounds())
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
+				n.Set(x, y, p.At(x, y))
+			}
+		}
+		src = n
+	}
+	var out bytes.Buffer
+	must(png.Encode(&out, src))
+	write(name, out.Bytes())
+	attachProfile(name, icc(), orient)
+}
+
+// Make a readable bad image without privacy or profile damage. Gray outputs
+// stay Gray, so opacity alone breaks the transparency control's reference.
+func wrongPixels(input, output, kind string) {
+	b := read(input)
+	src, _, e := image.Decode(bytes.NewReader(b))
+	must(e)
+	var dst image.Image
+	gray := b[25] == 0 || b[25] == 4
+	if kind == "opaque" && gray {
+		p := image.NewGray16(src.Bounds())
+		for y := 0; y < p.Bounds().Dy(); y++ {
+			for x := 0; x < p.Bounds().Dx(); x++ {
+				p.Set(x, y, src.At(x, y))
+			}
+		}
+		dst = p
+	} else {
+		p := image.NewNRGBA64(src.Bounds())
+		for y := 0; y < p.Bounds().Dy(); y++ {
+			for x := 0; x < p.Bounds().Dx(); x++ {
+				c := color.NRGBA64{A: 65535}
+				if kind == "transparent" {
+					c.A = 0
+				}
+				p.SetNRGBA64(x, y, c)
+			}
+		}
+		dst = p
+	}
+	var out bytes.Buffer
+	must(png.Encode(&out, dst))
+	data := out.Bytes()
+	var extra []byte
+	for p := 8; p < len(b); {
+		n := int(binary.BigEndian.Uint32(b[p:]))
+		k := string(b[p+4 : p+8])
+		if k == "iCCP" || k == "gAMA" || k == "cHRM" || k == "sRGB" || k == "cICP" {
+			extra = append(extra, b[p:p+n+12]...)
+		}
+		p += n + 12
+	}
+	write(output, append(append(append([]byte{}, data[:33]...), extra...), data[33:]...))
+}
+
+func emptyProfiles() {
+	write("empty-icc.png", read("photo.png"))
+	attachProfile("empty-icc.png", nil, 1)
+	write("empty-icc.jpg", read("orientation-1.jpg"))
+	attachProfile("empty-icc.jpg", nil, 1)
+	b := read("photo.webp")
+	out := append([]byte{}, b[:12]...)
+	count := 0
+	for p := 12; p < len(b); {
+		n := int(binary.LittleEndian.Uint32(b[p+4:]))
+		k := string(b[p : p+4])
+		if k == "ICCP" {
+			out = append(out, []byte("ICCP\x00\x00\x00\x00")...)
+			count++
+		} else {
+			out = append(out, b[p:p+8+n+n%2]...)
+		}
+		p += 8 + n + n%2
+	}
+	if count != 1 {
+		panic("the empty WebP profile fixture needs one declared profile")
+	}
+	binary.LittleEndian.PutUint32(out[4:], uint32(len(out)-8))
+	write("empty-icc.webp", out)
 }

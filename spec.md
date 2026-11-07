@@ -29,6 +29,7 @@ The manifest holds command syntax and result types. Each line below has a spec I
 | `interrupted` | Ctrl-C names the input, keeps old output and removes staging | `INTERRUPTED` |
 | `terminated` | SIGTERM names the input, keeps old output and removes staging | `TERMINATED` |
 | `multipart` | Animated PNG or WebP and multipicture JPEG are refused instead of discarding frames | `IMAGE_SHRINK_MULTIPART` |
+| `input-invalid` | Missing, empty, unreadable, truncated or malformed input is refused before vips starts, naming the input | `IMAGE_SHRINK_INPUT` |
 
 **Limits.** None.
 
@@ -52,6 +53,9 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | `quality` | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding |
 | `privacy` | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata |
 | `publication` | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process |
+| `alpha` | PNG and WebP retain transparency |
+| `pixels` | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing |
+| `profile` | The complete ICC color profile is retained |
 
 ## Case matrix
 
@@ -87,11 +91,4 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 
 ## Open lines
 
-The second review pair reproduced Gray transparency loss, malformed empty-profile acceptance and an aliased independent content reference. The existing promises remain unchanged.
-
-| ID | Command | Part | Case | Code |
-|---|---|---|---|---|
-| `input-invalid` | `ncly image shrink` | Failures | Missing, empty, unreadable, truncated or malformed input is refused before vips starts, naming the input | `IMAGE_SHRINK_INPUT` |
-| `alpha` | `ncly image shrink` | Acceptance | PNG and WebP retain transparency | - |
-| `pixels` | `ncly image shrink` | Acceptance | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing | - |
-| `profile` | `ncly image shrink` | Acceptance | The complete ICC color profile is retained | - |
+None. Round 3 selects the remaining input, transparency, profile and independent-content promises for complete family regression checks.
