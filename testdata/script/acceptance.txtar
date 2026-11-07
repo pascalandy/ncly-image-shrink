@@ -13,6 +13,10 @@ reads -case 'Keeps private data of the input' -private 'Ana Lima' photo.shrunk.p
 reads -case 'Keeps data that a reader needs' -private 'Montreal 45.5019' photo.shrunk.png reference photo.png bin/imageproof check 1
 reads -case 'Loses data that changes the meaning' photo.shrunk.png reference photo.png bin/imageproof check 1
 exec bin/imageproof clean
+# R1-F3: same valid ICC, gamma and privacy, but corrupt 1008 of 2048 pixels.
+# spec: pixels
+exec bin/imageproof bad-pixels photo.shrunk.png bad-fidelity.png
+reads photo.shrunk.png reference bad-fidelity.png bin/imageproof check 1 '{}' 64 32
 
 # The exact manifest example proves real byte saving and removal of its XMP.
 # spec: pixels format smaller privacy profile alpha
@@ -832,6 +836,8 @@ func main() {
 		attachModel(os.Args[2], os.Args[3], n)
 	case "declarations":
 		makeDeclarations()
+	case "bad-pixels":
+		badPixels(os.Args[2],os.Args[3])
 	case "fixture":
 		compareFixture(os.Args[2], os.Args[3])
 	case "color":
@@ -1390,4 +1396,12 @@ func attachProfile(name string, profile []byte, orient int) {
 		extra = append(extra, seg(0xfe, bytes.Repeat([]byte(private), 100))...)
 		write(name, append(append(append([]byte{}, b[:2]...), extra...), b[2:]...))
 	}
+}
+
+func badPixels(input, output string) {
+ b:=read(input); src,_,e:=image.Decode(bytes.NewReader(b));must(e); dst:=image.NewNRGBA64(src.Bounds())
+ for y:=0;y<dst.Bounds().Dy();y++ { for x:=0;x<dst.Bounds().Dx();x++ { dst.Set(x,y,src.At(x,y)); if x<3 || x>60 || y<3 || y>28 || x>=29 && x<=34 || y>=13 && y<=18 { dst.Set(x,y,color.NRGBA64{A:65535}) } } }
+ var encoded bytes.Buffer;must(png.Encode(&encoded,dst));data:=encoded.Bytes();var extra []byte
+ for pos:=8;pos<len(b); { n:=int(binary.BigEndian.Uint32(b[pos:]));k:=string(b[pos+4:pos+8]);if k=="iCCP" || k=="gAMA" || k=="cHRM" || k=="sRGB" || k=="cICP" { extra=append(extra,b[pos:pos+n+12]...) };pos+=n+12 }
+ write(output,append(append(append([]byte{},data[:33]...),extra...),data[33:]...))
 }
