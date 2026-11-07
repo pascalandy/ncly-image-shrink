@@ -217,6 +217,12 @@ func shrink(ctx context.Context, call extension.Call) (outcome contract.Outcome)
 	if p.format == "png" {
 		program.Args = []string{"copy", source + "[fail_on=warning]", candidate + "[" + options + "]", "--vips-concurrency", "1", "--vips-cache-max-memory", "64m"}
 	}
+	if p.format == "jpeg" {
+		// thumbnail converts CMYK to sRGB even without an ICC transform.
+		// jpegload's autorotate and resize retain native Gray/RGB/CMYK bands.
+		scale := math.Min(1, float64(p.side)/float64(max(p.config.Width, p.config.Height)))
+		program.Args = []string{"resize", source + "[fail_on=warning,autorotate]", candidate + "[" + options + "]", strconv.FormatFloat(scale, 'g', -1, 64), "--vips-concurrency", "1", "--vips-cache-max-memory", "64m"}
+	}
 	return wrap.Run(ctx, call, program, func(end wrap.Ended) contract.Outcome {
 		if end.Exit != 0 {
 			return end.Failed()

@@ -16,6 +16,7 @@ type metadata struct {
 	icc         []byte
 	orientation uint16
 	colors      []chunk
+	model       string
 }
 
 type chunk struct {
@@ -35,6 +36,10 @@ func inspectImage(data []byte, format string) (metadata, error) {
 		}
 		if err := pngDeclarations(chunks); err != nil {
 			return meta, err
+		}
+		meta.model = "RGB "
+		if len(data) > 25 && (data[25] == 0 || data[25] == 4) {
+			meta.model = "GRAY"
 		}
 		for _, c := range chunks {
 			switch c.kind {
@@ -68,6 +73,10 @@ func inspectImage(data []byte, format string) (metadata, error) {
 		if err != nil {
 			return meta, err
 		}
+		meta.model, err = jpegDeclarations(chunks)
+		if err != nil {
+			return meta, err
+		}
 		profiles := map[byte][]byte{}
 		total := byte(0)
 		for _, c := range chunks {
@@ -95,6 +104,7 @@ func inspectImage(data []byte, format string) (metadata, error) {
 			meta.icc = append(meta.icc, profiles[byte(n)]...)
 		}
 	case "webp":
+		meta.model = "RGB "
 		chunks, err := webpChunks(data)
 		if err != nil {
 			return meta, err
@@ -124,6 +134,9 @@ func inspectImage(data []byte, format string) (metadata, error) {
 			}
 		}
 	default:
+		return meta, errImage
+	}
+	if len(meta.icc) > 0 && !profileMatches(meta.icc, meta.model) {
 		return meta, errImage
 	}
 	return meta, nil

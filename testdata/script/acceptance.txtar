@@ -105,6 +105,40 @@ rm cmyk.shrunk.jpg
 ncly image shrink cmyk.jpg --max-side 32 --json
 exec bin/imageproof fixture cmyk.jpg cmyk.shrunk.jpg 32
 
+# spec: input-invalid profile
+cp gray-8-false.png bad-profile-mismatch.png
+exec bin/imageproof bad-model bad-profile-mismatch.png mismatch
+protect bad-profile-mismatch.png bad-profile-mismatch.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink bad-profile-mismatch.png
+cp gray-8-false.png bad-profile-truncated.png
+exec bin/imageproof bad-model bad-profile-truncated.png truncated
+protect bad-profile-truncated.png bad-profile-truncated.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink bad-profile-truncated.png
+cp gray-8-false.png bad-profile-size.png
+exec bin/imageproof bad-model bad-profile-size.png size
+protect bad-profile-size.png bad-profile-size.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink bad-profile-size.png
+cp gray-8-false.png bad-profile-tag.png
+exec bin/imageproof bad-model bad-profile-tag.png tag
+protect bad-profile-tag.png bad-profile-tag.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink bad-profile-tag.png
+cp cmyk.jpg bad-profile-mismatch.jpg
+exec bin/imageproof bad-model bad-profile-mismatch.jpg mismatch
+protect bad-profile-mismatch.jpg bad-profile-mismatch.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink bad-profile-mismatch.jpg
+cp cmyk.jpg bad-profile-truncated.jpg
+exec bin/imageproof bad-model bad-profile-truncated.jpg truncated
+protect bad-profile-truncated.jpg bad-profile-truncated.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink bad-profile-truncated.jpg
+cp cmyk.jpg bad-profile-size.jpg
+exec bin/imageproof bad-model bad-profile-size.jpg size
+protect bad-profile-size.jpg bad-profile-size.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink bad-profile-size.jpg
+cp cmyk.jpg bad-profile-tag.jpg
+exec bin/imageproof bad-model bad-profile-tag.jpg tag
+protect bad-profile-tag.jpg bad-profile-tag.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink bad-profile-tag.jpg
+
 # spec: exists
 protect photo.png photo.shrunk.png
 refuses IMAGE_SHRINK_EXISTS ncly image shrink photo.png
@@ -765,6 +799,31 @@ func main() {
 		panic("mode required")
 	}
 	switch os.Args[1] {
+	case "bad-model":
+		name, kind := os.Args[2], os.Args[3]
+		b := read(name)
+		format := "png"
+		model := "GRAY"
+		if strings.HasSuffix(name, ".jpg") {
+			format = "jpeg"
+			model = "CMYK"
+		}
+		profile, _ := metadataOf(b, format)
+		switch kind {
+		case "mismatch":
+			if model == "GRAY" {
+				profile = modelICC("CMYK")
+			} else {
+				profile = icc()
+			}
+		case "truncated":
+			profile = profile[:64]
+		case "size":
+			binary.BigEndian.PutUint32(profile, uint32(len(profile)+4))
+		case "tag":
+			binary.BigEndian.PutUint32(profile[136:], uint32(len(profile)+16))
+		}
+		attachProfile(name, profile, 1)
 	case "model-fixtures":
 		modelFixtures()
 	case "attach-model":
@@ -1296,9 +1355,9 @@ func modelFixtures() {
 	write("cmyk.raw", raw)
 }
 
-func attachModel(name, model string, orient int) {
+func attachModel(name, model string, orient int) { attachProfile(name, modelICC(model), orient) }
+func attachProfile(name string, profile []byte, orient int) {
 	b := read(name)
-	profile := modelICC(model)
 	if strings.HasSuffix(name, ".png") {
 		var filtered bytes.Buffer
 		filtered.Write(b[:8])

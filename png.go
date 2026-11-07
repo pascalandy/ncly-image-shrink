@@ -3,7 +3,9 @@ package image
 import (
 	"bytes"
 	"compress/zlib"
+	"encoding/binary"
 	"image"
+	"image/color"
 	"image/png"
 	"math"
 
@@ -54,12 +56,22 @@ func preparePNG(p *prepared) ([]byte, error) {
 	if max(w, h) > p.side {
 		scale := float64(p.side) / float64(max(w, h))
 		nw, nh := max(1, int(math.Round(float64(w)*scale))), max(1, int(math.Round(float64(h)*scale)))
-		resized := image.NewNRGBA64(image.Rect(0, 0, nw, nh))
+		var resized draw.Image = image.NewNRGBA(image.Rect(0, 0, nw, nh))
+		if p.data[24] == 16 {
+			resized = image.NewNRGBA64(image.Rect(0, 0, nw, nh))
+		}
 		draw.CatmullRom.Scale(resized, resized.Bounds(), input, input.Bounds(), draw.Src, nil)
 		input = resized
 	}
 	var encoded bytes.Buffer
-	if err := png.Encode(&encoded, input); err != nil {
+	// The Go PNG encoder expands Gray-alpha to RGBA. Keep Gray samples in
+	// their original model so the retained GRAY ICC remains compatible.
+	if p.data[25] == 0 || p.data[25] == 4 {
+		err = encodeGrayPNG(&encoded, input, p.data[24], p.data[25] == 4)
+	} else {
+		err = png.Encode(&encoded, input)
+	}
+	if err != nil {
 		return nil, err
 	}
 	chunks, err := pngChunks(encoded.Bytes())
@@ -88,4 +100,48 @@ func preparePNG(p *prepared) ([]byte, error) {
 		}
 	}
 	return output.Bytes(), nil
+}
+
+func encodeGrayPNG(output *bytes.Buffer, img image.Image, depth byte, alpha bool) error {
+	// Packed 1/2/4-bit Gray has no distinct profile model. Expanding those
+	// exact samples to eight bits is lossless; sixteen-bit samples stay wide.
+	if depth < 8 {
+		depth = 8
+	}
+	header := make([]byte, 13)
+	binary.BigEndian.PutUint32(header, uint32(img.Bounds().Dx()))
+	binary.BigEndian.PutUint32(header[4:], uint32(img.Bounds().Dy()))
+	header[8] = depth
+	if alpha {
+		header[9] = 4
+	}
+	var compressed bytes.Buffer
+	z := zlib.NewWriter(&compressed)
+	for y := img.Bounds().Min.Y; y < img.Bounds().Max.Y; y++ {
+		row := []byte{0} // PNG filter None, independently decoded before use.
+		for x := img.Bounds().Min.X; x < img.Bounds().Max.X; x++ {
+			c := color.NRGBA64Model.Convert(img.At(x, y)).(color.NRGBA64)
+			for i, s := range []uint16{c.R, c.A} {
+				if i == 1 && !alpha {
+					break
+				}
+				if depth == 16 {
+					row = binary.BigEndian.AppendUint16(row, s)
+				} else {
+					row = append(row, byte(s>>8))
+				}
+			}
+		}
+		if _, err := z.Write(row); err != nil {
+			return err
+		}
+	}
+	if err := z.Close(); err != nil {
+		return err
+	}
+	output.WriteString("\x89PNG\r\n\x1a\n")
+	writePNG(output, chunk{"IHDR", header})
+	writePNG(output, chunk{"IDAT", compressed.Bytes()})
+	writePNG(output, chunk{"IEND", nil})
+	return nil
 }
