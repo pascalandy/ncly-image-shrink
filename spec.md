@@ -50,7 +50,6 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | `staging` | Private exclusive staging cannot follow a planted temporary symlink and is removed on success, failure and signals |
 | `replace` | Force atomically replaces only the completed output and keeps the replaced regular file's permissions |
 | `quality` | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding |
-| `profile` | The complete ICC color profile is retained |
 | `privacy` | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata |
 | `publication` | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process |
 
@@ -95,3 +94,4 @@ The second review pair reproduced Gray transparency loss, malformed empty-profil
 | `input-invalid` | `ncly image shrink` | Failures | Missing, empty, unreadable, truncated or malformed input is refused before vips starts, naming the input | `IMAGE_SHRINK_INPUT` |
 | `alpha` | `ncly image shrink` | Acceptance | PNG and WebP retain transparency | - |
 | `pixels` | `ncly image shrink` | Acceptance | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing | - |
+| `profile` | `ncly image shrink` | Acceptance | The complete ICC color profile is retained | - |
