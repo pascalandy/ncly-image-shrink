@@ -33,6 +33,9 @@ func inspectImage(data []byte, format string) (metadata, error) {
 		if err != nil {
 			return meta, err
 		}
+		if err := pngDeclarations(chunks); err != nil {
+			return meta, err
+		}
 		for _, c := range chunks {
 			switch c.kind {
 			case "acTL", "fcTL", "fdAT":
@@ -280,6 +283,11 @@ func webpChunks(data []byte) ([]chunk, error) {
 // survive even if a future vips saver starts writing another metadata field.
 func cleanCandidate(data []byte, format string, original metadata) ([]byte, error) {
 	var out bytes.Buffer
+	// Validate before allowlisting: a known chunk name does not establish that
+	// its payload is a display declaration rather than a private-data carrier.
+	if _, err := inspectImage(data, format); err != nil {
+		return nil, err
+	}
 	switch format {
 	case "png":
 		chunks, err := pngChunks(data)
