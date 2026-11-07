@@ -29,6 +29,7 @@ The manifest holds command syntax and result types. Each line below has a spec I
 | `publish-fails` | Unsupported or failed publication fails closed and keeps any old output | `IMAGE_SHRINK_PUBLISH` |
 | `interrupted` | Ctrl-C names the input, keeps old output and removes staging | `INTERRUPTED` |
 | `terminated` | SIGTERM names the input, keeps old output and removes staging | `TERMINATED` |
+| `multipart` | Animated PNG or WebP and multipicture JPEG are refused instead of discarding frames | `IMAGE_SHRINK_MULTIPART` |
 
 **Limits.** None.
 
@@ -50,6 +51,11 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | `preview` | Dry run changes no file, shares input and conflict checks, reports output and overwrite, and marks compression and the publication operation pending |
 | `staging` | Private exclusive staging cannot follow a planted temporary symlink and is removed on success, failure and signals |
 | `replace` | Force atomically replaces only the completed output and keeps the replaced regular file's permissions |
+| `pixels` | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing |
+| `quality` | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding |
+| `profile` | The complete ICC color profile is retained |
+| `privacy` | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata |
+| `publication` | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process |
 
 ## Case matrix
 
@@ -82,13 +88,4 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 
 ## Open lines
 
-The first review pair found missing behavior or insufficient proof for these existing promises. Their findings retain the same spec IDs while the next round supplies complete family tests and repairs.
-
-| ID | Command | Part | Case | Code |
-|---|---|---|---|---|
-| `multipart` | `ncly image shrink` | Failures | Animated PNG or WebP and multipicture JPEG are refused instead of discarding frames | `IMAGE_SHRINK_MULTIPART` |
-| `pixels` | `ncly image shrink` | Acceptance | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing | - |
-| `quality` | `ncly image shrink` | Acceptance | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding | - |
-| `profile` | `ncly image shrink` | Acceptance | The complete ICC color profile is retained | - |
-| `privacy` | `ncly image shrink` | Acceptance | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata | - |
-| `publication` | `ncly image shrink` | Acceptance | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process | - |
+None. The generic cases and intake families remain selected for whole-family regression proof in round 2.

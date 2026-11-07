@@ -19,6 +19,48 @@ exec bin/imageproof clean
 ncly image shrink example.webp --json
 reads example.shrunk.webp reference example.webp bin/imageproof check 1
 
+# R1-F1: entire display-declaration family, not a single privacy payload.
+# spec: privacy input-invalid png-color
+exec bin/imageproof declarations
+ncly image shrink valid-gAMA.png --json
+exec bin/imageproof fixture valid-gAMA.png valid-gAMA.shrunk.png
+protect length-gAMA.png length-gAMA.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink length-gAMA.png
+protect duplicate-gAMA.png duplicate-gAMA.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink duplicate-gAMA.png
+protect value-gAMA.png value-gAMA.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink value-gAMA.png
+ncly image shrink valid-cHRM.png --json
+exec bin/imageproof fixture valid-cHRM.png valid-cHRM.shrunk.png
+protect length-cHRM.png length-cHRM.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink length-cHRM.png
+protect duplicate-cHRM.png duplicate-cHRM.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink duplicate-cHRM.png
+protect value-cHRM.png value-cHRM.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink value-cHRM.png
+ncly image shrink valid-sRGB.png --json
+exec bin/imageproof fixture valid-sRGB.png valid-sRGB.shrunk.png
+protect length-sRGB.png length-sRGB.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink length-sRGB.png
+protect duplicate-sRGB.png duplicate-sRGB.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink duplicate-sRGB.png
+protect value-sRGB.png value-sRGB.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink value-sRGB.png
+ncly image shrink valid-cICP.png --json
+exec bin/imageproof fixture valid-cICP.png valid-cICP.shrunk.png
+protect length-cICP.png length-cICP.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink length-cICP.png
+protect duplicate-cICP.png duplicate-cICP.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink duplicate-cICP.png
+protect value-cICP.png value-cICP.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink value-cICP.png
+protect conflict-gamma.png conflict-gamma.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink conflict-gamma.png
+protect conflict-chroma.png conflict-chroma.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink conflict-chroma.png
+! exec bin/imageproof fixture valid-gAMA.png leaking-output.png
+stderr 'invalid PNG display declaration'
+
 # spec: exists
 protect photo.png photo.shrunk.png
 refuses IMAGE_SHRINK_EXISTS ncly image shrink photo.png
@@ -486,6 +528,7 @@ func metadataOf(b []byte, format string) ([]byte, bool) {
 	sensitive := false
 	switch format {
 	case "png":
+		checkPNGDeclarations(b)
 		for pos := 8; pos+12 <= len(b); {
 			n := int(binary.BigEndian.Uint32(b[pos:]))
 			if pos+n+12 > len(b) {
@@ -678,6 +721,8 @@ func main() {
 		panic("mode required")
 	}
 	switch os.Args[1] {
+	case "declarations":
+		makeDeclarations()
 	case "fixture":
 		compareFixture(os.Args[2], os.Args[3])
 	case "color":
@@ -951,4 +996,116 @@ func fixtureOrientation(data []byte, format string) int {
 		}
 	}
 	return 1
+}
+
+// Independent fixture construction and checks, used by the public scenarios.
+func makeDeclarations() {
+	base := read("photo.png")
+	// Remove every optional display declaration from the common pixel fixture.
+	var plain bytes.Buffer
+	plain.Write(base[:8])
+	for pos := 8; pos < len(base); {
+		n := int(binary.BigEndian.Uint32(base[pos:]))
+		kind := string(base[pos+4 : pos+8])
+		if kind == "IHDR" || kind == "IDAT" || kind == "IEND" {
+			plain.Write(base[pos : pos+n+12])
+		}
+		pos += n + 12
+	}
+	b := plain.Bytes()
+	decls := map[string][]byte{"gAMA": {0, 1, 0x86, 0xa0}, "cHRM": chroma(), "sRGB": {2}, "cICP": {1, 13, 0, 1}}
+	for kind, good := range decls {
+		put := func(label string, payload []byte) {
+			extra := append(payload, chunk("tEXt", bytes.Repeat([]byte(private), 100))...)
+			write(label+"-"+kind+".png", append(append(append([]byte{}, b[:33]...), extra...), b[33:]...))
+		}
+		put("valid", chunk(kind, good))
+		put("length", chunk(kind, []byte(private)))
+		put("duplicate", append(chunk(kind, good), chunk(kind, good)...))
+		invalid := bytes.Clone(good)
+		switch kind {
+		case "gAMA":
+			clear(invalid)
+		case "cHRM":
+			binary.BigEndian.PutUint32(invalid, 100001)
+		case "sRGB":
+			invalid[0] = 4
+		case "cICP":
+			invalid[2] = 1
+		}
+		put("value", chunk(kind, invalid))
+	}
+	conflict := append(chunk("sRGB", []byte{2}), chunk("gAMA", []byte{0, 1, 0x86, 0xa0})...)
+	write("conflict-gamma.png", append(append(append([]byte{}, b[:33]...), conflict...), b[33:]...))
+	conflict = append(chunk("sRGB", []byte{2}), chunk("cHRM", chroma())...)
+	write("conflict-chroma.png", append(append(append([]byte{}, b[:33]...), conflict...), b[33:]...))
+	// A readable output whose color block smuggles private text must fail the
+	// independent reader specifically for that declaration, before ICC checks.
+	bad := append(chunk("gAMA", []byte(private)), chunk("sRGB", []byte{2})...)
+	write("leaking-output.png", append(append(append([]byte{}, b[:33]...), bad...), b[33:]...))
+}
+
+// This reader has its own declaration parser. It never calls the adapter's
+// parser and never treats a CRC-correct chunk name as proof of its payload.
+func checkPNGDeclarations(b []byte) {
+	seen := map[string][]byte{}
+	for pos := 8; pos < len(b); {
+		if pos+12 > len(b) {
+			panic("invalid PNG declaration framing")
+		}
+		n := int(binary.BigEndian.Uint32(b[pos:]))
+		if n > len(b)-pos-12 {
+			panic("invalid PNG declaration framing")
+		}
+		kind, d := string(b[pos+4:pos+8]), b[pos+8:pos+8+n]
+		if crc32.ChecksumIEEE(b[pos+4:pos+8+n]) != binary.BigEndian.Uint32(b[pos+8+n:]) {
+			panic("invalid PNG declaration CRC")
+		}
+		switch kind {
+		case "gAMA", "cHRM", "sRGB", "cICP":
+			if _, ok := seen[kind]; ok {
+				panic("duplicate PNG display declaration")
+			}
+			seen[kind] = d
+			bad := false
+			switch kind {
+			case "gAMA":
+				bad = len(d) != 4 || binary.BigEndian.Uint32(d) == 0
+			case "cHRM":
+				bad = len(d) != 32
+				if !bad {
+					for i := 0; i < 32; i += 8 {
+						x, y := binary.BigEndian.Uint32(d[i:]), binary.BigEndian.Uint32(d[i+4:])
+						if x > 100000 || y == 0 || y > 100000 || uint64(x)+uint64(y) > 100000 {
+							bad = true
+						}
+					}
+				}
+			case "sRGB":
+				bad = len(d) != 1 || d[0] > 3
+			case "cICP":
+				bad = len(d) != 4
+				if !bad {
+					bad = !bytes.Contains([]byte{1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 22}, d[:1]) || !bytes.Contains([]byte{1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18}, d[1:2]) || d[2] != 0 || d[3] != 1
+				}
+			}
+			if bad {
+				panic("invalid PNG display declaration: " + kind)
+			}
+		}
+		pos += n + 12
+	}
+	if _, srgb := seen["sRGB"]; srgb {
+		if g, ok := seen["gAMA"]; ok && binary.BigEndian.Uint32(g) != 45455 {
+			panic("conflicting PNG gamma")
+		}
+		standard := []uint32{31270, 32900, 64000, 33000, 30000, 60000, 15000, 6000}
+		if c, ok := seen["cHRM"]; ok {
+			for i, v := range standard {
+				if binary.BigEndian.Uint32(c[i*4:]) != v {
+					panic("conflicting PNG chromaticity")
+				}
+			}
+		}
+	}
 }
