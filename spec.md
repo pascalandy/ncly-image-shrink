@@ -49,7 +49,6 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | `names` | Paths with spaces, leading dashes, shell characters or loader-option characters are data, and output stays beside the input |
 | `preview` | Dry run changes no file, shares input and conflict checks, reports output and overwrite, and marks compression and the publication operation pending |
 | `staging` | Private exclusive staging cannot follow a planted temporary symlink and is removed on success, failure and signals |
-| `publication` | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process |
 | `replace` | Force atomically replaces only the completed output and keeps the replaced regular file's permissions |
 
 ## Case matrix
@@ -92,3 +91,4 @@ The first review pair found missing behavior or insufficient proof for these exi
 | `quality` | `ncly image shrink` | Acceptance | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding | - |
 | `profile` | `ncly image shrink` | Acceptance | The complete ICC color profile is retained | - |
 | `privacy` | `ncly image shrink` | Acceptance | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata | - |
+| `publication` | `ncly image shrink` | Acceptance | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process | - |
