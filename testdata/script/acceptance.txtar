@@ -1564,7 +1564,6 @@ func compareFixture(input, output string, side int) {
 		cubic = cubicReference(src, orient, ow, oh, dw, dh)
 	}
 	var differences [4]uint64
-	var largest [4]uint64
 	for y := 0; y < dh; y++ {
 		for x := 0; x < dw; x++ {
 			var expected [4]float64
@@ -1605,7 +1604,6 @@ func compareFixture(input, output string, side int) {
 					panic(fmt.Sprintf("fixture pixel %d,%d channel %d differs by %d, bound %d", x, y, c, d, limit))
 				}
 				differences[c] += uint64(d)
-				largest[c] = max(largest[c], uint64(d))
 			}
 		}
 	}
@@ -1646,9 +1644,6 @@ func compareFixture(input, output string, side int) {
 			}
 			pos += 12 + n
 		}
-	}
-	if cubic != nil {
-		fmt.Printf("independent cubic: %d pixels, maximum RGBA error %v in 16-bit units\n", dw*dh, largest)
 	}
 	fmt.Println("complete pixels, orientation, alpha, ICC and privacy match")
 }
