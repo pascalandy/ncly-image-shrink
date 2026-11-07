@@ -61,6 +61,50 @@ refuses IMAGE_SHRINK_INPUT ncly image shrink conflict-chroma.png
 ! exec bin/imageproof fixture valid-gAMA.png leaking-output.png
 stderr 'invalid PNG display declaration'
 
+# R1-F2: preserve Gray, Gray-alpha and CMYK sample models and profiles.
+# spec: profile orientation pixels alpha depth
+exec bin/imageproof model-fixtures
+exec vips rawload gray-8-false.raw gray-8-false.v 64 32 1 --interpretation b-w
+exec vips copy gray-8-false.v gray-8-false.png
+exec bin/imageproof attach-model gray-8-false.png GRAY 2
+ncly image shrink gray-8-false.png --json
+exec bin/imageproof fixture gray-8-false.png gray-8-false.shrunk.png
+rm gray-8-false.shrunk.png
+ncly image shrink gray-8-false.png --max-side 32 --json
+exec bin/imageproof fixture gray-8-false.png gray-8-false.shrunk.png 32
+exec vips rawload gray-8-true.raw gray-8-true.v 64 32 2 --interpretation b-w
+exec vips copy gray-8-true.v gray-8-true.png
+exec bin/imageproof attach-model gray-8-true.png GRAY 2
+ncly image shrink gray-8-true.png --json
+exec bin/imageproof fixture gray-8-true.png gray-8-true.shrunk.png
+rm gray-8-true.shrunk.png
+ncly image shrink gray-8-true.png --max-side 32 --json
+exec bin/imageproof fixture gray-8-true.png gray-8-true.shrunk.png 32
+exec vips rawload gray-16-false.raw gray-16-false.v 64 32 1 --interpretation b-w --format ushort
+exec vips copy gray-16-false.v gray-16-false.png
+exec bin/imageproof attach-model gray-16-false.png GRAY 2
+ncly image shrink gray-16-false.png --json
+exec bin/imageproof fixture gray-16-false.png gray-16-false.shrunk.png
+rm gray-16-false.shrunk.png
+ncly image shrink gray-16-false.png --max-side 32 --json
+exec bin/imageproof fixture gray-16-false.png gray-16-false.shrunk.png 32
+exec vips rawload gray-16-true.raw gray-16-true.v 64 32 2 --interpretation b-w --format ushort
+exec vips copy gray-16-true.v gray-16-true.png
+exec bin/imageproof attach-model gray-16-true.png GRAY 2
+ncly image shrink gray-16-true.png --json
+exec bin/imageproof fixture gray-16-true.png gray-16-true.shrunk.png
+rm gray-16-true.shrunk.png
+ncly image shrink gray-16-true.png --max-side 32 --json
+exec bin/imageproof fixture gray-16-true.png gray-16-true.shrunk.png 32
+exec vips rawload cmyk.raw cmyk.v 64 32 4 --interpretation cmyk
+exec vips copy cmyk.v 'cmyk.jpg[Q=100,keep=none]'
+exec bin/imageproof attach-model cmyk.jpg CMYK 6
+ncly image shrink cmyk.jpg --json
+exec bin/imageproof fixture cmyk.jpg cmyk.shrunk.jpg
+rm cmyk.shrunk.jpg
+ncly image shrink cmyk.jpg --max-side 32 --json
+exec bin/imageproof fixture cmyk.jpg cmyk.shrunk.jpg 32
+
 # spec: exists
 protect photo.png photo.shrunk.png
 refuses IMAGE_SHRINK_EXISTS ncly image shrink photo.png
@@ -721,6 +765,12 @@ func main() {
 		panic("mode required")
 	}
 	switch os.Args[1] {
+	case "model-fixtures":
+		modelFixtures()
+	case "attach-model":
+		n, e := strconv.Atoi(os.Args[4])
+		must(e)
+		attachModel(os.Args[2], os.Args[3], n)
 	case "declarations":
 		makeDeclarations()
 	case "fixture":
@@ -845,8 +895,14 @@ func compareFixture(input, output string) {
 		longest = oh
 	}
 	scale := 1.0
-	if longest > 2048 {
-		scale = 2048.0 / float64(longest)
+	side := 2048
+	if len(os.Args) > 4 {
+		var e error
+		side, e = strconv.Atoi(os.Args[4])
+		must(e)
+	}
+	if longest > side {
+		scale = float64(side) / float64(longest)
 	}
 	near := func(a, b float64) bool {
 		d := a - b
@@ -1107,5 +1163,172 @@ func checkPNGDeclarations(b []byte) {
 				}
 			}
 		}
+	}
+}
+
+// A generated Gray display profile and CMYK printer profile. No system ICC
+// file or user photo is needed by the tests. The CMYK A2B0 LUT is deliberately
+// simple; preserving its exact bytes and device samples is the contract here.
+func modelICC(model string) []byte {
+	type tag struct {
+		name string
+		data []byte
+	}
+	xyz := make([]byte, 20)
+	copy(xyz, "XYZ ")
+	for i, v := range []float64{.9642, 1, .8249} {
+		binary.BigEndian.PutUint32(xyz[8+i*4:], uint32(v*65536+.5))
+	}
+	curve := make([]byte, 16)
+	copy(curve, "curv")
+	binary.BigEndian.PutUint32(curve[8:], 1)
+	binary.BigEndian.PutUint16(curve[12:], 563)
+	desc := make([]byte, 112)
+	copy(desc, "desc")
+	binary.BigEndian.PutUint32(desc[8:], 23)
+	copy(desc[12:], "Generated model profile\x00")
+	cprt := append([]byte("text\x00\x00\x00\x00"), []byte("Public-domain generated test data\x00")...)
+	tags := []tag{{"wtpt", xyz}, {"desc", desc}, {"cprt", cprt}}
+	if model == "GRAY" {
+		tags = append(tags, tag{"kTRC", curve})
+	} else {
+		lut := make([]byte, 48)
+		copy(lut, "mft1")
+		lut[8], lut[9], lut[10] = 4, 3, 2
+		for i := 0; i < 3; i++ {
+			binary.BigEndian.PutUint32(lut[12+4*(3*i+i):], 65536)
+		}
+		for i := 0; i < 4; i++ {
+			for v := 0; v < 256; v++ {
+				lut = append(lut, byte(v))
+			}
+		}
+		for c := 0; c < 2; c++ {
+			for m := 0; m < 2; m++ {
+				for y := 0; y < 2; y++ {
+					for k := 0; k < 2; k++ {
+						r, g, b := color.CMYKToRGB(byte(c*255), byte(m*255), byte(y*255), byte(k*255))
+						// Valid Lab8 endpoints. This synthetic printer's neutral axis
+						// follows luminance; colour axes vary with the device samples.
+						l := (int(r)*54 + int(g)*183 + int(b)*19) / 256
+						lut = append(lut, byte(l), byte(128+(int(r)-int(g))/4), byte(128+(int(g)-int(b))/4))
+					}
+				}
+			}
+		}
+		for i := 0; i < 3; i++ {
+			for v := 0; v < 256; v++ {
+				lut = append(lut, byte(v))
+			}
+		}
+		tags = append(tags, tag{"A2B0", lut})
+	}
+	b := make([]byte, 132+12*len(tags))
+	copy(b[8:], []byte{2, 0x10, 0, 0})
+	copy(b[12:], "mntr"+model+"XYZ ")
+	if model == "CMYK" {
+		copy(b[12:], "prtrCMYKLab ")
+	}
+	copy(b[36:], "acspAPPL")
+	copy(b[68:], xyz[8:20])
+	binary.BigEndian.PutUint32(b[128:], uint32(len(tags)))
+	for i, t := range tags {
+		for len(b)%4 != 0 {
+			b = append(b, 0)
+		}
+		copy(b[132+12*i:], t.name)
+		binary.BigEndian.PutUint32(b[136+12*i:], uint32(len(b)))
+		binary.BigEndian.PutUint32(b[140+12*i:], uint32(len(t.data)))
+		b = append(b, t.data...)
+	}
+	for len(b)%4 != 0 {
+		b = append(b, 0)
+	}
+	binary.BigEndian.PutUint32(b, uint32(len(b)))
+	return b
+}
+
+func modelFixtures() {
+	write("gray.icc", modelICC("GRAY"))
+	write("cmyk.icc", modelICC("CMYK"))
+	for _, depth := range []int{8, 16} {
+		for _, alpha := range []bool{false, true} {
+			var raw []byte
+			for y := 0; y < 32; y++ {
+				for x := 0; x < 64; x++ {
+					v := uint16(0x2345)
+					if x >= 32 {
+						v = 0xcdef
+					}
+					a := uint16(65535)
+					if y >= 16 {
+						a = 0x8123
+					}
+					for i, s := range []uint16{v, a} {
+						if i == 1 && !alpha {
+							break
+						}
+						if depth == 16 {
+							raw = binary.LittleEndian.AppendUint16(raw, s)
+						} else {
+							raw = append(raw, byte(s>>8))
+						}
+					}
+				}
+			}
+			write(fmt.Sprintf("gray-%d-%t.raw", depth, alpha), raw)
+		}
+	}
+	var raw []byte
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 64; x++ {
+			r, g, b := byte(220), byte(0), byte(0)
+			if x >= 32 {
+				r, g = 0, 180
+			}
+			if y >= 16 {
+				r, g, b = 0, 0, 200
+			}
+			c, m, yy, k := color.RGBToCMYK(r, g, b)
+			raw = append(raw, c, m, yy, k)
+		}
+	}
+	write("cmyk.raw", raw)
+}
+
+func attachModel(name, model string, orient int) {
+	b := read(name)
+	profile := modelICC(model)
+	if strings.HasSuffix(name, ".png") {
+		var filtered bytes.Buffer
+		filtered.Write(b[:8])
+		for pos := 8; pos < len(b); {
+			n := int(binary.BigEndian.Uint32(b[pos:]))
+			kind := string(b[pos+4 : pos+8])
+			if kind != "eXIf" && kind != "iCCP" {
+				filtered.Write(b[pos : pos+n+12])
+			}
+			pos += n + 12
+		}
+		b = filtered.Bytes()
+		var compressed bytes.Buffer
+		z := zlib.NewWriter(&compressed)
+		_, e := z.Write(profile)
+		must(e)
+		must(z.Close())
+		extra := chunk("iCCP", append([]byte("Generated\x00\x00"), compressed.Bytes()...))
+		extra = append(extra, chunk("eXIf", exif(uint16(orient)))...)
+		extra = append(extra, chunk("tEXt", bytes.Repeat([]byte(private), 100))...)
+		write(name, append(append(append([]byte{}, b[:33]...), extra...), b[33:]...))
+	} else {
+		seg := func(k byte, d []byte) []byte {
+			out := []byte{255, k}
+			out = binary.BigEndian.AppendUint16(out, uint16(len(d)+2))
+			return append(out, d...)
+		}
+		extra := seg(0xe2, append([]byte("ICC_PROFILE\x00\x01\x01"), profile...))
+		extra = append(extra, seg(0xe1, append([]byte("Exif\x00\x00"), exif(uint16(orient))...))...)
+		extra = append(extra, seg(0xfe, bytes.Repeat([]byte(private), 100))...)
+		write(name, append(append(append([]byte{}, b[:2]...), extra...), b[2:]...))
 	}
 }
