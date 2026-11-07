@@ -1,112 +1,69 @@
 #!/usr/bin/env bash
-# acceptance.sh [FIXTURE] runs the command of ## Acceptance in spec.md as an
-# agent would, with --json and --no-input. just acceptance runs it. It installs
-# the extension and the ncly of the Nicely version that go.mod pins into scratch
-# folders, so the install of the user stays as it is. With a fixture, it works
-# on a copy and checks that the checksum of the fixture does not change.
-# Without one, it makes an input. Each line # spec: names the lines of spec.md
-# that the checks below it prove.
-#
-# This file is a form filled for the example command, ncly image shrink.
-# Do what each "Fill:" comment asks, then delete the comment.
+# Run the sharing-copy command in the SDK's owned scratch install. All default
+# images and the independent reader come from the acceptance scenario archive.
 set -Eeuo pipefail
 
-die() {
-	echo "acceptance: $*" >&2
-	exit 1
-}
-
-sum() {
+fct_die() { printf 'acceptance: %s\n' "$*" >&2; exit 1; }
+fct_sum() {
 	if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d ' ' -f 1
 }
-
-# Fill: the command of ## Acceptance, in place of the example. Add --dry-run for
-# a paid command.
-command=(image shrink)
 fixture="${1:-}"
 if [[ -n "$fixture" ]]; then
-	[[ -f "$fixture" ]] || die "$fixture is no file"
 	[[ "$fixture" == /* ]] || fixture="$PWD/$fixture"
+	[[ -f "$fixture" ]] || fct_die "fixture is not a regular file"
 fi
 cd "$(dirname "${BASH_SOURCE[0]}")"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/ncly-image-shrink-acceptance.XXXXXX")"
-trap 'rm -rf "$scratch"' EXIT
-work="$scratch/work"
-mkdir -p "$scratch/bin" "$work"
-
-# A shim of mise reads its config, state, and installs under the XDG folders,
-# which move below. So each program is found first, and its folder goes first
-# in PATH.
-# Fill: each program that the command runs, in place of python3. go and just
-# build and install.
+trap 'rm -rf -- "$scratch"' EXIT
+mkdir -p "$scratch/bin" "$scratch/work"
 path="$scratch/bin"
-for program in go just python3; do
-	found="$(mise which "$program" 2>/dev/null || command -v "$program")" || die "$program is not on PATH"
+for program in go just vips; do
+	found="$(mise which "$program" 2>/dev/null || command -v "$program")" || fct_die "$program is not on PATH"
 	path="$path:${found%/*}"
 done
 export PATH="$path:$PATH"
-# Go builds before XDG_CACHE_HOME moves, so it keeps the caches of the user.
+sed '1,/^-- proof.go --$/d' testdata/script/acceptance.txtar > "$scratch/proof.go"
+go build -o "$scratch/bin/imageproof" "$scratch/proof.go"
 go build -o "$scratch/bin/ncly" github.com/pascalandy/nicely/cmd/ncly
 XDG_DATA_HOME="$scratch/data" just install
 export XDG_DATA_HOME="$scratch/data" XDG_CONFIG_HOME="$scratch/config" XDG_STATE_HOME="$scratch/state" XDG_CACHE_HOME="$scratch/cache"
-
+cd "$scratch/work"
+imageproof make
+input="$PWD/photo.png"
 if [[ -n "$fixture" ]]; then
-	before="$(sum "$fixture")"
-	cp "$fixture" "$work/"
-	input="$work/${fixture##*/}"
-else
-	# Fill: how to make an input without a fixture, such as a clip that ffmpeg generates.
-	input="$work/notes.md"
-	printf '# Notes\nFirst line\nLast line\n' >"$input"
+	before="$(fct_sum "$fixture")"
+	cp -- "$fixture" "$PWD/"
+	input="$PWD/${fixture##*/}"
 fi
+input_before="$(fct_sum "$input")"
+# spec: preview
+ncly image shrink "$input" --dry-run --json --no-input
+output="${input%.*}.shrunk.${input##*.}"
+[[ ! -e "$output" ]] || fct_die "dry run published an output"
+# spec: smaller pixels format privacy profile png-color alpha publication
+ncly image shrink "$input" --json --no-input
+[[ -f "$output" ]] || fct_die "the output is absent"
+[[ "$(wc -c < "$output")" -lt "$(wc -c < "$input")" ]] || fct_die "the output saves no bytes"
+imageproof check 1 "$output"
+[[ "$(fct_sum "$input")" == "$input_before" ]] || fct_die "the input changed"
+if [[ -n "$fixture" ]]; then
+	[[ "$(fct_sum "$fixture")" == "$before" ]] || fct_die "the fixture changed"
+fi
+# spec: not-smaller
 status=0
-(cd "$work" && ncly "${command[@]}" "$input" --json --no-input) >"$scratch/answer" 2>"$scratch/stderr" || status=$?
-cat "$scratch/answer"
-cat "$scratch/stderr" >&2
-if [[ -n "$fixture" && "$(sum "$fixture")" != "$before" ]]; then
-	die "the checksum of $fixture changed"
+ncly image shrink tiny.png --json --no-input > "$scratch/refusal.out" 2> "$scratch/refusal.err" || status=$?
+[[ "$status" == 2 ]] || fct_die "the optimized PNG was not refused"
+grep -q '"code":"IMAGE_SHRINK_NOT_SMALLER"' "$scratch/refusal.err" || fct_die "wrong refusal code"
+[[ ! -e tiny.shrunk.png ]] || fct_die "the refused PNG left an output"
+# spec: replace
+ncly image shrink "$input" --force --json --no-input
+imageproof check 1 "$output"
+imageproof clean
+cd - > /dev/null
+just uninstall > /dev/null
+status=0
+ncly describe image shrink --json > /dev/null 2> "$scratch/uninstall.err" || status=$?
+if [[ "$status" != 2 ]] || ! grep -q '"code":"NOT_FOUND"' "$scratch/uninstall.err"; then
+	fct_die "uninstall left the extension discoverable"
 fi
-[[ "$status" == 0 ]] || die "ncly ${command[*]} exited $status"
-grep -qF '"ok":true' "$scratch/answer" || die 'the answer holds no "ok":true'
-
-# Fill: check each property of ## Acceptance on the primary output, with a reader
-# that is not the wrapped program. Compare the content that this reader gives
-# with an independent reference. A check of only a header or of the file type is
-# not sufficient. Here, wc and awk read the input again, and the answer must
-# match their counts.
-# spec: size
-grep -qE "\"size_bytes\":$(wc -c <"$input" | tr -d ' ')[,}]" "$scratch/answer" || die "the size differs from wc -c"
-# spec: lines
-grep -qE "\"lines\":$(awk 'END { print NR }' "$input")[,}]" "$scratch/answer" || die "the line count differs from awk"
-
-# The acceptance cases of testdata/script/ prove each case of the Output group
-# of generic-cases.md on a made input, and the kit checks them with reads, as
-# acceptance-cases.md in the contract says. This script checks the real input.
-
-# A second run checks the Determinism criterion of qa.md.
-(cd "$work" && ncly "${command[@]}" "$input" --json --no-input) >"$scratch/second" || die "the second run failed"
-cmp -s "$scratch/answer" "$scratch/second" || die "two runs give different answers: $(cat "$scratch/second")"
-
-# refuses CODE EXIT FILE expects the refusal CODE, with the exit code EXIT, for FILE.
-refuses() {
-	local code=0
-	(cd "$work" && ncly "${command[@]}" "$3" --json --no-input) >/dev/null 2>"$scratch/refusal" || code=$?
-	if [[ "$code" != "$2" ]] || ! grep -qF "\"code\":\"$1\"" "$scratch/refusal"; then
-		die "$3: want $1 and exit $2, got exit $code: $(cat "$scratch/refusal")"
-	fi
-}
-# Fill: each input that the wrapped program accepts but the domain refuses, which
-# ## Acceptance lists, in place of the example.
-# spec: not-text
-printf '\211PNG\r\n\032\n\000\000\000\rIHDR' >"$work/image.png"
-refuses IMAGE_SHRINK_NOT_TEXT 2 "$work/image.png"
-
-# The steps of the Uninstall section of qa.md, on the scratch install.
-just uninstall >/dev/null
-code=0
-ncly describe image shrink --json >/dev/null 2>"$scratch/stderr" || code=$?
-if [[ "$code" != 2 ]] || ! grep -qF '"code":"NOT_FOUND"' "$scratch/stderr"; then
-	die "after just uninstall, ncly describe image shrink gives exit $code, want 2 with NOT_FOUND: $(cat "$scratch/stderr")"
-fi
-
-echo "acceptance: ncly ${command[*]} passed on $input"
+printf 'acceptance: sharing copy, privacy, fidelity, refusal, replacement and uninstall passed\n'

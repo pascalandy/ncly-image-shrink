@@ -34,7 +34,28 @@ jobs:
         with:
           just-version: '1.58.0'
 
-      # Both runners ship /usr/bin/python3. Add a step for each other program that
-      # the scenarios run.
+      - name: Install libvips on macOS
+        if: runner.os == 'macOS'
+        run: brew install vips
+
+      # Ubuntu 24.04's libvips predates the required version. Build the exact
+      # release with only the codecs and color/EXIF support this extension uses.
+      - name: Build libvips 8.18.7 on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build pkg-config libglib2.0-dev libexpat1-dev libjpeg-dev libpng-dev libwebp-dev liblcms2-dev libexif-dev
+          curl --fail --location --retry 3 https://github.com/libvips/libvips/releases/download/v8.18.7/vips-8.18.7.tar.xz --output "$RUNNER_TEMP/vips-8.18.7.tar.xz"
+          echo '5baaead3b0bb20ffdb9e9ff09aa9fda08620923df77b63b436654cb5e0b3bf94  '"$RUNNER_TEMP/vips-8.18.7.tar.xz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/vips-source"
+          tar -xf "$RUNNER_TEMP/vips-8.18.7.tar.xz" --strip-components=1 -C "$RUNNER_TEMP/vips-source"
+          meson setup "$RUNNER_TEMP/vips-build" "$RUNNER_TEMP/vips-source" --prefix=/usr/local --libdir=lib --buildtype=release --auto-features=disabled -Djpeg=enabled -Dpng=enabled -Dwebp=enabled -Dlcms=enabled -Dexif=enabled -Dzlib=enabled -Dexamples=false
+          meson compile -C "$RUNNER_TEMP/vips-build"
+          sudo meson install -C "$RUNNER_TEMP/vips-build"
+          sudo ldconfig
+          vips --version
+
       - name: Run just check
         run: just check

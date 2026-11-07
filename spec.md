@@ -14,7 +14,22 @@ The manifest holds command syntax and result types. Each line below has a spec I
 
 **Failures.**
 
-None proven yet.
+| ID | Condition | Code |
+|---|---|---|
+| `input-invalid` | Missing, empty, unreadable, truncated or malformed input is refused before vips starts, naming the input | `IMAGE_SHRINK_INPUT` |
+| `unsupported` | A format outside JPEG, PNG or WebP, or an extension that disagrees with its bytes, is refused before vips starts | `IMAGE_SHRINK_FORMAT` |
+| `budget` | Compressed input above 64 MiB, over 40 million pixels, or a dimension above 40000 is refused before full decoding | `IMAGE_SHRINK_LIMIT` |
+| `multipart` | Animated PNG or WebP and multipicture JPEG are refused instead of discarding frames | `IMAGE_SHRINK_MULTIPART` |
+| `options` | Invalid size, quality or timeout values are refused | `USAGE_INVALID` |
+| `exists` | Existing output without force is refused before work and kept | `IMAGE_SHRINK_EXISTS` |
+| `output-link` | A symbolic-link output, nonregular output or output hard-linked to the input is refused, with or without force | `IMAGE_SHRINK_OUTPUT` |
+| `race` | Output appearing during create is kept unchanged and the run fails | `IMAGE_SHRINK_EXISTS` |
+| `no-vips` | Missing or too-old vips and failed version probes receive the install hint | `PREREQ_MISSING` |
+| `worker-fails` | Nonzero vips exit, missing output or timeout fails without publishing, keeping the old output and naming the input | `RUNTIME` |
+| `invalid-result` | A damaged, wrong-format, wrong-size, metadata-bearing output or lost ICC is refused before publication | `IMAGE_SHRINK_RESULT` |
+| `publish-fails` | Unsupported or failed publication fails closed and keeps any old output | `IMAGE_SHRINK_PUBLISH` |
+| `interrupted` | Ctrl-C names the input, keeps old output and removes staging | `INTERRUPTED` |
+| `terminated` | SIGTERM names the input, keeps old output and removes staging | `TERMINATED` |
 
 **Limits.** None.
 
@@ -22,7 +37,25 @@ None proven yet.
 
 Tests generate all images. The real acceptance input is a generated PNG with colored quadrants, transparency and a private location block. An optional fixture replaces it and receives the same size, format, privacy and geometry checks. Independent Go image decoders inspect complete pixel content. Container readers inspect metadata. References come from the generated image's declared pixels, orientation and color data.
 
-None proven yet.
+| ID | Property |
+|---|---|
+| `not-smaller` | An optimized image whose candidate is not strictly smaller is refused with no new output, keeping an old one |
+| `format` | JPEG, PNG and static WebP output keep the input format |
+| `smaller` | The published copy has strictly fewer bytes than the input |
+| `pixels` | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing |
+| `geometry` | The longest side fits the chosen bound, defaults to 2048, retains aspect ratio within pixel rounding, and never enlarges |
+| `quality` | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding |
+| `orientation` | All eight EXIF orientations are applied to the pixels before orientation metadata is removed |
+| `profile` | The complete ICC color profile is retained |
+| `png-color` | PNG gamma, chromaticity and sRGB declarations retain their display meaning |
+| `alpha` | PNG and WebP retain transparency |
+| `depth` | PNG retains its 16-bit sample precision |
+| `privacy` | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata |
+| `names` | Paths with spaces, leading dashes, shell characters or loader-option characters are data, and output stays beside the input |
+| `preview` | Dry run changes no file, shares input and conflict checks, reports output and overwrite, and marks compression and the publication operation pending |
+| `staging` | Private exclusive staging cannot follow a planted temporary symlink and is removed on success, failure and signals |
+| `publication` | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process |
+| `replace` | Force atomically replaces only the completed output and keeps the replaced regular file's permissions |
 
 ## Case matrix
 
@@ -55,36 +88,4 @@ None proven yet.
 
 ## Open lines
 
-| ID | Command | Part | Case | Code |
-|---|---|---|---|---|
-| `input-invalid` | `ncly image shrink` | Failures | Missing, empty, unreadable, truncated or malformed input is refused before vips starts, naming the input | `IMAGE_SHRINK_INPUT` |
-| `unsupported` | `ncly image shrink` | Failures | A format outside JPEG, PNG or WebP, or an extension that disagrees with its bytes, is refused before vips starts | `IMAGE_SHRINK_FORMAT` |
-| `budget` | `ncly image shrink` | Failures | Compressed input above 64 MiB, over 40 million pixels, or a dimension above 40000 is refused before full decoding | `IMAGE_SHRINK_LIMIT` |
-| `multipart` | `ncly image shrink` | Failures | Animated PNG or WebP and multipicture JPEG are refused instead of discarding frames | `IMAGE_SHRINK_MULTIPART` |
-| `options` | `ncly image shrink` | Failures | Invalid size, quality or timeout values are refused | `USAGE_INVALID` |
-| `exists` | `ncly image shrink` | Failures | Existing output without force is refused before work and kept | `IMAGE_SHRINK_EXISTS` |
-| `output-link` | `ncly image shrink` | Failures | A symbolic-link output, nonregular output or output hard-linked to the input is refused, with or without force | `IMAGE_SHRINK_OUTPUT` |
-| `race` | `ncly image shrink` | Failures | Output appearing during create is kept unchanged and the run fails | `IMAGE_SHRINK_EXISTS` |
-| `no-vips` | `ncly image shrink` | Failures | Missing or too-old vips and failed version probes receive the install hint | `PREREQ_MISSING` |
-| `worker-fails` | `ncly image shrink` | Failures | Nonzero vips exit, missing output or timeout fails without publishing, keeping the old output and naming the input | `RUNTIME` |
-| `invalid-result` | `ncly image shrink` | Failures | A damaged, wrong-format, wrong-size, metadata-bearing output or lost ICC is refused before publication | `IMAGE_SHRINK_RESULT` |
-| `publish-fails` | `ncly image shrink` | Failures | Unsupported or failed publication fails closed and keeps any old output | `IMAGE_SHRINK_PUBLISH` |
-| `not-smaller` | `ncly image shrink` | Acceptance | An optimized image whose candidate is not strictly smaller is refused with no new output, keeping an old one | `IMAGE_SHRINK_NOT_SMALLER` |
-| `format` | `ncly image shrink` | Acceptance | JPEG, PNG and static WebP output keep the input format | - |
-| `smaller` | `ncly image shrink` | Acceptance | The published copy has strictly fewer bytes than the input | - |
-| `pixels` | `ncly image shrink` | Acceptance | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing | - |
-| `geometry` | `ncly image shrink` | Acceptance | The longest side fits the chosen bound, defaults to 2048, retains aspect ratio within pixel rounding, and never enlarges | - |
-| `quality` | `ncly image shrink` | Acceptance | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding | - |
-| `orientation` | `ncly image shrink` | Acceptance | All eight EXIF orientations are applied to the pixels before orientation metadata is removed | - |
-| `profile` | `ncly image shrink` | Acceptance | The complete ICC color profile is retained | - |
-| `png-color` | `ncly image shrink` | Acceptance | PNG gamma, chromaticity and sRGB declarations retain their display meaning | - |
-| `alpha` | `ncly image shrink` | Acceptance | PNG and WebP retain transparency | - |
-| `depth` | `ncly image shrink` | Acceptance | PNG retains its 16-bit sample precision | - |
-| `privacy` | `ncly image shrink` | Acceptance | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata | - |
-| `names` | `ncly image shrink` | Acceptance | Paths with spaces, leading dashes, shell characters or loader-option characters are data, and output stays beside the input | - |
-| `preview` | `ncly image shrink` | Acceptance | Dry run changes no file, shares input and conflict checks, reports output and overwrite, and marks compression and the publication operation pending | - |
-| `staging` | `ncly image shrink` | Acceptance | Private exclusive staging cannot follow a planted temporary symlink and is removed on success, failure and signals | - |
-| `publication` | `ncly image shrink` | Acceptance | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process | - |
-| `replace` | `ncly image shrink` | Acceptance | Force atomically replaces only the completed output and keeps the replaced regular file's permissions | - |
-| `interrupted` | `ncly image shrink` | Failures | Ctrl-C names the input, keeps old output and removes staging | `INTERRUPTED` |
-| `terminated` | `ncly image shrink` | Failures | SIGTERM names the input, keeps old output and removes staging | `TERMINATED` |
+None. The matrix covers the applicable generic cases, including the output privacy and publication cases.

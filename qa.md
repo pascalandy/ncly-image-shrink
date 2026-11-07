@@ -1,65 +1,44 @@
 # image-shrink QA
 
-This file answers one question: what does the UAT of `ncly image shrink` add to the [UAT protocol](https://github.com/pascalandy/nicely/blob/v0.27.0/docs/qa/protocol.md) of Nicely? [spec.md](spec.md) holds the behavior.
-
-This file is a form filled for the example command, `ncly image shrink`.
-Fill in each section for your commands, then delete each line that starts with "Fill:".
+Follow Nicely's [UAT protocol](https://github.com/pascalandy/nicely/blob/v0.27.0/docs/qa/protocol.md). The command's behavior is in [spec.md](spec.md).
 
 ## Prerequisites
 
-- `just acceptance` passes on the fixture that [spec.md](spec.md#acceptance) names in `## Acceptance`, in a clone at the tested tag
-- `python3` 3.9 or later, which the example command runs
-- `wc`, for the independent check
-
-Fill: each program that the extension wraps, at the version that `vision.md` names as tested, and each tool of the independent check.
+Run `just acceptance` on the tag under review. The command needs vips 8.18.7 or later. Go and just build the extension and its independent image reader.
 
 ## Prompt for the fresh agent
 
-"Use Nicely to count the lines of `<run>/notes.md`"
-
-Fill: one sentence that a user would say, without a command, a flag, or a hint.
+"Use Nicely to shrink the image `<run>/photo.png`"
 
 ## Criteria
 
 | Family | Criterion | Covered by |
 |---|---|---|
-| Result | `wc -c` gives the `size_bytes` of the answer | `just acceptance` |
-| Fidelity | The answer keeps the properties that [spec.md](spec.md#acceptance) names in `## Acceptance` | `just acceptance`, which claims the spec ID of each property |
-| Determinism | Runs on one host give the same answer | `just acceptance`, which runs the command twice |
-| Errors | The failures and refusals of [spec.md](spec.md) | [Error scenarios](#error-cases), through `just check` |
-| Uninstall | The installed extension no longer appears in describe | The release receipt |
-
-Fill: for each family, what a tool other than the extension measures on the output.
-
-Fill: in Covered by, the test that proves the criterion. When no test can, write `Manual:` and the reason, such as a screen that only a human sees.
+| Result | The published file meets `smaller` and `format` | `just acceptance` and the generated-image scenario |
+| Fidelity | The `pixels`, `orientation`, `profile`, `png-color`, `alpha` and `depth` properties hold | The independent Go reader in `acceptance.txtar` |
+| Privacy | The `privacy` property holds for the location and descriptive block | `reads -private`, the container reader, and `just acceptance` |
+| Determinism | Repeating the same call with force produces the same image content | `just acceptance` compares both results with the independent reference |
+| Errors | Each declared failure and the optimized-image refusal is observed | The refusal, budget, program, publication and signal cases in `acceptance.txtar` |
+| Uninstall | The installed command disappears from describe | `just acceptance` and the release receipt |
 
 ## Error cases
 
-The scenarios own error stimuli and expected answers:
-
-- [inspect.txtar](testdata/script/inspect.txtar) covers command failures and signals
-- [refusal.txtar](testdata/script/refusal.txtar) covers the refusal from `## Acceptance`
-
-Fill: replace these links with the scenarios of your commands.
+[acceptance.txtar](testdata/script/acceptance.txtar) owns error stimuli and expected answers. [shrink-first.txtar](testdata/script/shrink-first.txtar) retains the first public-boundary preview scenario. Its first failing commit is recorded in review.toml.
 
 ## Human items
 
-- The human gives the verdict, records reservations, and closes the UAT
-- The human decides the domain's accepted inputs, names, and limits
-- The human checks perception on a real screen when the changed behavior needs that check
-- The human handles permission prompts, secrets, grants, and fixture locks
-- The human sets Economy budgets; the release receipt holds the measurements
-
-Fill: name each screen or permission prompt that this extension needs.
+The human gives the UAT verdict and chooses whether a lossy sharing copy looks acceptable. This local command needs no key, grant or network. The human approves installation of a missing image program.
 
 ## Known limits
 
-[spec.md](spec.md) holds each accepted limit. A limit never contradicts a line of Failures or of Acceptance.
+The spec lists accepted limits. A dry run leaves byte saving pending because it starts no image-writing operation.
 
-Fill: each defect that a UAT found and that is still open, with its issue.
+## Test-kit accommodations
+
+The binary example fixture ends in an existing newline inside its valid XMP chunk, so [Nicely #496](https://github.com/pascalandy/nicely/issues/496) adds no bytes. Remove that constraint and its transport test after the SDK preserves binary fixtures. The same fixture must continue to pass the actual shrink and independent image checks.
+
+For [Nicely #497](https://github.com/pascalandy/nicely/issues/497), the unreadable input uses a readable reference, a permission assertion, restoration and a complete byte comparison instead of the kit's input snapshot. Restore `protect unreadable.png` and remove those manual steps when the kit supports that case. Other inputs use `protect`.
 
 ## Gotchas
 
-- Scratch XDG folders break a `just` that mise installed, because its shim then reads the config, state, and installs of mise there. Run `mise which just` before you move them, and call that path. `just acceptance` finds each program first.
-
-Fill: each surprise that the next tester must know, such as the time of one run on the test host.
+The SDK moves HOME and XDG folders during scratch runs. `acceptance.sh` resolves program paths before that move. The independent reader lives in the scenario archive and is extracted for the real acceptance run.

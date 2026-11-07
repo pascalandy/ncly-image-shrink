@@ -1,15 +1,14 @@
 ---
 name: image-shrink
-description: Use when an agent needs the size or the line count of a file before it reads the file or sends it on.
+description: Use to make one local JPEG, PNG or WebP smaller for sharing, without its location, author, camera or capture date.
 ---
 
-# image-shrink
+# Shrink an image for sharing
 
-Use `ncly image shrink` to learn the size and the line count of one file. It only reads the file.
+Use `ncly image shrink` for one still image. Dry-run the call first, then run it when the predicted destination is suitable. Read the flags and result fields with `ncly describe image shrink --json`.
 
-- Give a path in your folder: the command reads it there
-- Read `size_bytes` and `lines` from the answer of `--json`
-- Inspect each file of a folder in its own call
-- On `PREREQ_MISSING`, relay `hint` to the human, who installs Python 3.9 or later
-- On `IMAGE_SHRINK_NOT_TEXT`, the file is no text, such as an image: do not count its lines
-- With `--json`, a command failure leaves stdout empty. Read the error object from the last line of stderr
+The copy stays beside its input. Success means fewer bytes. The input stays unchanged. Orientation is applied, color data is retained, and descriptive metadata is removed.
+
+On `IMAGE_SHRINK_NOT_SMALLER`, the input may already be optimized. Choose a smaller dimension or a lower lossy quality if acceptable. Never claim that a dry run proves byte saving.
+
+On `IMAGE_SHRINK_EXISTS`, inspect the copy before choosing force. On `PREREQ_MISSING`, relay the install hint to the human. For animation, multiple pictures or formats outside JPEG, PNG and WebP, use another tool.

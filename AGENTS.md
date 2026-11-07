@@ -41,19 +41,9 @@ A wrapped script goes in `worker/`.
 
 `AGENTS/rule-index.md` and its parts in `AGENTS/rule-index/` name the check that enforces each rule of this file. `just check` prints how many rules wait for a check.
 
-## Remove the example
-
-Keep the named extension's root. After these steps, follow "Change a command" for `ncly image shrink`.
-
-1. Delete `inspect.go`, `worker/inspect.py`, and `testdata/script/inspect.txtar`. Rewrite `testdata/script/refusal.txtar` for a refusal of your command, or delete it when the command has none. Rewrite `testdata/script/acceptance.txtar` for a property of your command
-2. Replace the example declaration at `image shrink` and its examples in `manifest.toml`. Remove the `[[errors]]` entry of `IMAGE_SHRINK_NOT_TEXT`, and `[programs.python3]` when no command needs it
-3. Replace the `image-shrink.inspect` catalog entries for the new command. Keep every catalog ID under `image-shrink.`
-4. Remove the `ncly image shrink` section and the introduction line that names the example from `spec.md`. Remove its mentions from `vision.md`, `qa.md`, `skill/SKILL.md`, and the Recipes of `AGENTS.md`. Replace it in `acceptance.sh`
-5. Remove its handler entry from `extension.go`. When `worker/` is empty, also remove `//go:embed worker`, its variable, and `Resources`. Then run `gofmt -w .`
-
 ## Recipes
 
-The recipes need Go, `just`, and `uv`, which runs the pinned Copier of `just update`. The scenarios of `inspect` run `/usr/bin/python3`, 3.9 or later.
+The recipes need Go, `just`, and `uv`, which runs the pinned Copier of `just update`. The scenarios run vips 8.18.7 or later and build an independent Go image reader.
 Signoff also needs Git and `gh` with the `gh-signoff` extension.
 
 After Copier creates the repository, run `go mod tidy` once, which writes `go.sum` for the recipes. Then commit the repository with Git, since `just update` needs a clean Git tree. Run `lefthook install` once per clone, so `just check` runs before each push. GitHub runs it again for each push to `main` and each pull request.

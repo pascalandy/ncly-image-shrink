@@ -5,39 +5,99 @@ name = "shrink"
 
 [[commands]]
 path = "image shrink"
-summary = "image-shrink.inspect.summary"
-examples = ["ncly image shrink notes.md", "ncly image shrink notes.md --json"]
-effects = {}
+summary = "image-shrink.summary"
+examples = ["ncly image shrink example.webp --dry-run --json", "ncly image shrink example.webp --force --json"]
+effects = { user_writes = true }
 modes = { dry_run = true }
-requires = { bins = ["python3"] }
+requires = { bins = ["vips"] }
 
 [[commands.args]]
 name = "file"
-summary = "image-shrink.inspect.file"
+summary = "image-shrink.file"
 required = true
+
+[[commands.flags]]
+name = "max-side"
+value = "pixels"
+type = "integer"
+default = 2048
+summary = "image-shrink.max_side"
+
+[[commands.flags]]
+name = "quality"
+value = "quality"
+type = "integer"
+default = 80
+summary = "image-shrink.quality"
 
 [[commands.flags]]
 name = "timeout"
 value = "duration"
 default = "30s"
-summary = "image-shrink.inspect.timeout"
+summary = "image-shrink.timeout"
+
+[[commands.flags]]
+name = "force"
+summary = "image-shrink.force"
 
 [commands.result.schema]
 type = "object"
-required = ["size_bytes", "lines"]
-properties = { size_bytes = { type = "integer", minimum = 0 }, lines = { type = "integer", minimum = 0 } }
+required = ["output", "input_bytes", "output_bytes"]
+properties = { output = { type = "string" }, input_bytes = { type = "integer", minimum = 1 }, output_bytes = { type = "integer", minimum = 1 } }
 
 [commands.result.dry_run_schema]
 type = "object"
-required = ["size_bytes", "lines"]
-properties = { size_bytes = { type = "integer", minimum = 0 }, lines = { type = "integer", minimum = 0 } }
+required = ["output", "input_bytes", "overwrite", "pending_checks"]
+properties = { output = { type = "string" }, input_bytes = { type = "integer", minimum = 1 }, overwrite = { type = "boolean" }, pending_checks = { type = "array", items = { type = "string" } } }
 
 [[errors]]
-code = "IMAGE_SHRINK_NOT_TEXT"
+code = "IMAGE_SHRINK_INPUT"
+exit = 2
+commands = ["image shrink"]
+
+[[errors]]
+code = "IMAGE_SHRINK_FORMAT"
+exit = 2
+commands = ["image shrink"]
+
+[[errors]]
+code = "IMAGE_SHRINK_LIMIT"
+exit = 2
+commands = ["image shrink"]
+
+[[errors]]
+code = "IMAGE_SHRINK_MULTIPART"
+exit = 2
+commands = ["image shrink"]
+
+[[errors]]
+code = "IMAGE_SHRINK_EXISTS"
+exit = 2
+commands = ["image shrink"]
+
+[[errors]]
+code = "IMAGE_SHRINK_OUTPUT"
+exit = 2
+commands = ["image shrink"]
+
+[[errors]]
+code = "IMAGE_SHRINK_NOT_SMALLER"
 exit = 2
 commands = ["image shrink"]
 modes = ["run"]
 
-[programs.python3]
-version = "3.9"
-install = { brew = ["brew", "install", "python"], pacman = ["sudo", "pacman", "-S", "python"], apt = ["sudo", "apt", "install", "python3"], dnf = ["sudo", "dnf", "install", "python3"] }
+[[errors]]
+code = "IMAGE_SHRINK_RESULT"
+exit = 1
+commands = ["image shrink"]
+modes = ["run"]
+
+[[errors]]
+code = "IMAGE_SHRINK_PUBLISH"
+exit = 1
+commands = ["image shrink"]
+modes = ["run"]
+
+[programs.vips]
+version = "8.18.7"
+install = { brew = ["brew", "install", "vips"], pacman = ["sudo", "pacman", "-S", "libvips"] }

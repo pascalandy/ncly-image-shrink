@@ -62,3 +62,10 @@ statement = "Display declarations to cover are EXIF orientation, ICC color profi
 [[experiments]]
 command = "vips --version"
 result = "Exit 0, vips-8.18.7 on om1. stderr also warns that the optional openslide plugin cannot load libopenslide.so.1. The selected JPEG, PNG and WebP operations do not use that plugin."
+
+[[facts]]
+kind = "sourced"
+statement = "Thumbnail always converts or exports at depth 8. PNG must therefore prepare orientation and resizing at native precision before vips copy compresses it, so a 16-bit input is not quantized."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/libvips/resample/thumbnail.c"
+revision = "v8.18.7"
+read = "vips_thumbnail_build, non-linear processing-space conversion and the Colour management block stating that export always uses depth 8"

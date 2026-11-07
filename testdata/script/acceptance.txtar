@@ -1,41 +1,761 @@
-# A model of an acceptance case of ## Acceptance in spec.md, as Acceptance
-# cases in the folder that just contract prints defines. The case makes its
-# input, runs the command, then reads checks the primary output: it reads the
-# output with a reader that is not the wrapped program, compares the text of
-# the reader with the reference, and requires the bad variant to fail.
-#
-# The answer of ncly image shrink is its output, so the kit's reader
-# answer reads its keys. It compares each whole value, so 30 lines never pass
-# for 3. Its bad variant is the answer of a worker that counts ten times.
-#
-# Fill: one case like this one for each property of ## Acceptance. For a
-# command that writes a file, read that file with a decoder of its format.
-# Give a case to each Output case that ## Case matrix names, with -case and
-# its name. For a block that a reader needs, give its private text with
-# -private, and make the bad variant keep the raw block.
-# An accepted privacy limit uses -case '<case>' -limit <id>. Name its ID in
-# Accepted for every matrix row of that case, and declare the same Output:
-# binding in its Limit cell. Keep -private for text that
-# must stay absent, and keep the independent reader and failing bad variant.
-# Check the retained metadata and a nondefault display declaration there.
-chmod 755 bin/python3
+# All fixtures are generated here. The independent Go reader decodes every
+# output pixel and checks color data and the private metadata block.
+env GOTRACEBACK=none
+exec go build -o bin/imageproof proof.go
+exec bin/imageproof make
+chmod 755 bin/vips
 
-# spec: size lines
-ncly image shrink notes.md --json
-cp stdout answer.json
-reads answer.json reference bad.json answer size_bytes lines
+# spec: preview smaller format pixels privacy profile png-color alpha quality publication staging
+symlink photo.shrunk.png.tmp -> photo.png
+protect photo.png photo.shrunk.png.tmp
+predicts ncly image shrink photo.png
+reads -case 'Keeps private data of the input' -private 'Ana Lima' photo.shrunk.png reference photo.png bin/imageproof check 1
+reads -case 'Keeps data that a reader needs' -private 'Montreal 45.5019' photo.shrunk.png reference photo.png bin/imageproof check 1
+reads -case 'Loses data that changes the meaning' photo.shrunk.png reference photo.png bin/imageproof check 1
+exec bin/imageproof clean
 
--- notes.md --
-# Notes
-First line
-Last line
+# The exact manifest example proves real byte saving and removal of its XMP.
+# spec: pixels format smaller privacy profile alpha
+ncly image shrink example.webp --json
+reads example.shrunk.webp reference example.webp bin/imageproof check 1
+
+# spec: exists
+protect photo.png photo.shrunk.png
+refuses IMAGE_SHRINK_EXISTS ncly image shrink photo.png
+
+# spec: replace
+protect photo.png
+chmod 640 photo.shrunk.png
+predicts ncly image shrink photo.png --force
+exec bin/imageproof mode photo.shrunk.png 640
+reads -case 'Exists, without --force' photo.shrunk.png reference photo.png bin/imageproof check 1
+
+# All eight orientations carry a real TIFF orientation entry, ICC profile,
+# private comment and non-symmetric colored quadrants.
+# spec: orientation profile format pixels privacy
+ncly image shrink orientation-1.jpg --json
+reads orientation-1.shrunk.jpg reference orientation-1.jpg bin/imageproof check 1
+ncly image shrink orientation-2.jpg --json
+reads orientation-2.shrunk.jpg reference orientation-2.jpg bin/imageproof check 2
+ncly image shrink orientation-3.jpg --json
+reads orientation-3.shrunk.jpg reference orientation-3.jpg bin/imageproof check 3
+ncly image shrink orientation-4.jpg --json
+reads orientation-4.shrunk.jpg reference orientation-4.jpg bin/imageproof check 4
+ncly image shrink orientation-5.jpg --json
+reads orientation-5.shrunk.jpg reference orientation-5.jpg bin/imageproof check 5
+ncly image shrink orientation-6.jpg --json
+reads orientation-6.shrunk.jpg reference orientation-6.jpg bin/imageproof check 6
+ncly image shrink orientation-7.jpg --json
+reads orientation-7.shrunk.jpg reference orientation-7.jpg bin/imageproof check 7
+ncly image shrink orientation-8.jpg --json
+reads orientation-8.shrunk.jpg reference orientation-8.jpg bin/imageproof check 8
+
+# The native PNG orientation path preserves unassociated alpha samples.
+# spec: orientation pixels alpha
+ncly image shrink png-orientation-1.png --json
+reads png-orientation-1.shrunk.png reference png-orientation-1.png bin/imageproof check 1
+ncly image shrink png-orientation-2.png --json
+reads png-orientation-2.shrunk.png reference png-orientation-2.png bin/imageproof check 2
+ncly image shrink png-orientation-3.png --json
+reads png-orientation-3.shrunk.png reference png-orientation-3.png bin/imageproof check 3
+ncly image shrink png-orientation-4.png --json
+reads png-orientation-4.shrunk.png reference png-orientation-4.png bin/imageproof check 4
+ncly image shrink png-orientation-5.png --json
+reads png-orientation-5.shrunk.png reference png-orientation-5.png bin/imageproof check 5
+ncly image shrink png-orientation-6.png --json
+reads png-orientation-6.shrunk.png reference png-orientation-6.png bin/imageproof check 6
+ncly image shrink png-orientation-7.png --json
+reads png-orientation-7.shrunk.png reference png-orientation-7.png bin/imageproof check 7
+ncly image shrink png-orientation-8.png --json
+reads png-orientation-8.shrunk.png reference png-orientation-8.png bin/imageproof check 8
+
+# Independent display-declaration cases without ICC overriding them.
+# spec: png-color pixels privacy
+ncly image shrink chroma.png --json
+reads chroma.shrunk.png reference chroma.png bin/imageproof color chroma
+ncly image shrink srgb.png --json
+reads srgb.shrunk.png reference srgb.png bin/imageproof color srgb
+
+# spec: depth
+ncly image shrink deep.png --quality 1 --json
+reads deep.shrunk.png reference deep.png bin/imageproof deep
+
+# A lossless WebP fixture is generated with vips; Go's separate WebP decoder
+# compares the lossy copy to the declared original quadrants and ICC bytes.
+exec vips copy photo.png 'photo.webp[lossless,keep=icc]'
+exec bin/imageproof private-webp photo.webp
+# spec: alpha format quality pixels profile
+ncly image shrink photo.webp --json
+reads photo.shrunk.webp reference photo.webp bin/imageproof check 1
+
+# spec: geometry
+ncly image shrink large.png --json
+reads large.shrunk.png reference large.png bin/imageproof check 1 '{}' 2048 1024
+rm large.shrunk.png
+ncly image shrink large.png --max-side 64 --json
+reads large.shrunk.png reference large.png bin/imageproof check 1 '{}' 64 32
+
+# spec: not-smaller
+protect tiny.png tiny.shrunk.png
+keeps 2 ncly image shrink tiny.png
+stderr '"code":"IMAGE_SHRINK_NOT_SMALLER"'
+! exists tiny.shrunk.png
+
+# spec: input-invalid
+exec bin/imageproof header
+exec bin/imageproof animated
+exec bin/imageproof huge
+cp photo.png unreadable.png
+cp unreadable.png readable-reference.png
+chmod 000 unreadable.png
+protect missing.png empty.png broken.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink missing.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink empty.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink broken.png
+# Explicit accommodation for pascalandy/nicely#497: protect cannot hash a
+# mode-000 file. Once fixed, remove the manual reference, mode check,
+# restoration and cmp, and use protect unreadable.png again.
+protect unreadable.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink unreadable.png
+exec bin/imageproof mode unreadable.png 0
+chmod 600 unreadable.png
+cmp unreadable.png readable-reference.png
+
+# spec: unsupported
+protect wrong.png wrong.gif wrong.jpg
+refuses IMAGE_SHRINK_FORMAT ncly image shrink wrong.png
+refuses IMAGE_SHRINK_FORMAT ncly image shrink wrong.gif
+cp photo.png wrong.jpg
+refuses IMAGE_SHRINK_FORMAT ncly image shrink wrong.jpg
+
+# spec: budget
+protect expansion.png expansion-pixels.png huge.png
+refuses IMAGE_SHRINK_LIMIT ncly image shrink expansion.png
+refuses IMAGE_SHRINK_LIMIT ncly image shrink expansion-pixels.png
+refuses IMAGE_SHRINK_LIMIT ncly image shrink huge.png
+
+# spec: multipart
+protect animated.png
+refuses IMAGE_SHRINK_MULTIPART ncly image shrink animated.png
+
+# spec: options
+exits 2 ncly image shrink photo.png --max-side 0 --json
+exits 2 ncly image shrink photo.png --quality 101 --json
+exits 2 ncly image shrink photo.png --timeout soon --json
+exits 2 ncly image shrink photo.png --timeout 31s --json
+
+# spec: output-link
+rm photo.shrunk.png
+symlink photo.shrunk.png -> photo.png
+protect photo.png photo.shrunk.png
+refuses IMAGE_SHRINK_OUTPUT ncly image shrink photo.png
+refuses IMAGE_SHRINK_OUTPUT ncly image shrink photo.png --force
+rm photo.shrunk.png
+ncly image shrink photo.png --json
+reads -case 'Is a link to the input' photo.shrunk.png reference photo.png bin/imageproof check 1
+rm photo.shrunk.png
+exec ln photo.png photo.shrunk.png
+protect photo.png photo.shrunk.png
+refuses IMAGE_SHRINK_OUTPUT ncly image shrink photo.png --force
+rm photo.shrunk.png
+
+# spec: names
+cp photo.png 'my photo;$(date)[x].PNG'
+ncly image shrink 'my photo;$(date)[x].PNG' --json
+reads 'my photo;$(date)[x].shrunk.PNG' reference photo.png bin/imageproof check 1
+cp photo.png -photo.png
+ncly image shrink -- -photo.png
+reads ./-photo.shrunk.png reference photo.png bin/imageproof check 1
+
+# spec: staging publication
+protect photo.png
+env STUB=hold
+holds marker photo.shrunk.png ncly image shrink photo.png
+reads -case 'Temporary file' photo.shrunk.png reference photo.png bin/imageproof check 1
+rm photo.shrunk.png
+
+# spec: race
+env STUB=appears
+protect photo.png
+appears marker photo.shrunk.png ncly image shrink photo.png
+rm marker
+rm photo.shrunk.png
+
+# spec: worker-fails
+env STUB=fail
+protect photo.png photo.shrunk.png
+keeps 1 ncly image shrink photo.png
+stderr '"code":"RUNTIME"'
+env STUB=noisy
+protect photo.png
+keeps 0 ncly image shrink photo.png
+env STUB=fail
+protect photo.png photo.shrunk.png
+keeps 1 ncly image shrink photo.png --force
+rm photo.shrunk.png
+env STUB=hang
+protect photo.png photo.shrunk.png
+keeps 1 ncly image shrink photo.png --timeout 100ms
+stderr '"code":"RUNTIME"'
+rm marker
+
+# spec: interrupted
+env STUB=hang
+protect photo.png photo.shrunk.png
+signal INT marker ncly image shrink photo.png
+stderr '"code":"INTERRUPTED"'
+exec bin/imageproof clean
+rm marker
+
+# spec: terminated
+cp photo.png photo.shrunk.png
+env STUB=hang
+protect photo.png photo.shrunk.png
+signal TERM marker ncly image shrink photo.png --force
+stderr '"code":"TERMINATED"'
+exec bin/imageproof clean
+rm marker
+rm photo.shrunk.png
+
+# spec: invalid-result
+env STUB=invalid
+protect photo.png photo.shrunk.png
+keeps 1 ncly image shrink photo.png
+stderr '"code":"IMAGE_SHRINK_RESULT"'
+
+# spec: publish-fails
+env STUB=
+protect photo.png photo.shrunk.png
+[linux] without link keeps 1 ncly image shrink photo.png
+[linux] stderr '"code":"IMAGE_SHRINK_PUBLISH"'
+ncly image shrink photo.png --json
+protect photo.png photo.shrunk.png
+[linux] without rename keeps 1 ncly image shrink photo.png --force
+[linux] stderr '"code":"IMAGE_SHRINK_PUBLISH"'
+
+# spec: no-vips
+env STUB=old
+protect photo.png
+refuses PREREQ_MISSING ncly image shrink photo.png --force
+env STUB=
+rm bin/vips
+env PATH=$WORK/bin
+refuses PREREQ_MISSING ncly image shrink photo.png --force
+
+-- example.webp --
+RIFFP  WEBPVP8X
+   4   ?    ICCPÔ    Ô      mntrRGB XYZ             acspAPPL                          öÖ     Ó-test                                               rXYZ   ä   gXYZ   ø   bXYZ     wtpt      rTRC  4   gTRC  D   bTRC  T   desc  d   pXYZ       o£  8ö  ‘XYZ       b”  ·…  ÜXYZ       $¡  …  ¶ÔXYZ       öÖ     Ó-curv       3  curv       3  curv       3  desc       Generated color profile                                                                             VP8L2   /?À0´$˜ý‰†&ÃÊÿ
+K@’L—–¶®€HÛf&oò>‡G#ú?èµ×òXMP   <x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/" dc:description="Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05; "/></rdf:RDF></x:xmpmeta>
 -- reference --
-size_bytes: 29
-lines: 3
--- bad.json --
-{"ok":true,"contract_version":1,"size_bytes":29,"lines":30}
--- bin/python3 --
+complete pixels, orientation, alpha, ICC and privacy match
+-- empty.png --
+-- broken.png --
+PNG cut short
+-- wrong.png --
+<svg onload="fetch('https://example.invalid')"/>
+-- wrong.gif --
+GIF89a
+-- go.mod --
+module imageproof
+
+go 1.27.0
+
+require golang.org/x/image v0.47.0
+-- go.sum --
+golang.org/x/image v0.47.0 h1:za/8gVz++PPZqmZJBNSISICN5Rrj5zixP/8K++fgmqo=
+golang.org/x/image v0.47.0/go.mod h1:IkN5o4A7vq55vXN8FWjjnhg9Rs2GOtffqsSi9mWAKYE=
+-- bin/vips --
 #!/bin/sh
-# python3 of this scenario: the Python of the system.
-case "$1" in --version) exec /usr/bin/python3 --version ;; esac
-exec /usr/bin/python3 "$@"
+for real in /usr/bin/vips /opt/homebrew/bin/vips /usr/local/bin/vips; do
+  if [ -x "$real" ]; then break; fi
+done
+case "$1:$STUB" in
+--version:old) echo vips-1.0.0; exit 0 ;;
+--version:*) exec "$real" --version ;;
+esac
+# Copy is only fixture generation, outside a command under test.
+
+target=${3%%\[*}
+case "$STUB" in
+fail) exit 75 ;;
+noisy) yes progress | head -c 2000000 ;;
+hold)
+  printf partial > "$target"
+  echo ready > "$WORK/marker"
+  while [ -e "$WORK/marker" ]; do sleep 0.01; done
+  ;;
+appears)
+  echo ready > "$WORK/marker"
+  while [ ! -e "$WORK/photo.shrunk.png" ]; do sleep 0.01; done
+  ;;
+hang)
+  printf partial > "$target"
+  echo ready > "$WORK/marker"
+  exec sleep 30
+  ;;
+invalid) cp "$WORK/tiny.png" "$target"; exit 0 ;;
+esac
+exec "$real" "$@"
+-- proof.go --
+package main
+
+import (
+	"bytes"
+	"compress/zlib"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
+	"fmt"
+	_ "golang.org/x/image/webp"
+	"hash/crc32"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"image/png"
+	"io"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+)
+
+const private = "Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05"
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+func write(name string, data []byte) { must(os.WriteFile(name, data, 0600)) }
+func read(name string) []byte        { b, e := os.ReadFile(name); must(e); return b }
+func chunk(kind string, data []byte) []byte {
+	var out bytes.Buffer
+	must(binary.Write(&out, binary.BigEndian, uint32(len(data))))
+	out.WriteString(kind)
+	out.Write(data)
+	must(binary.Write(&out, binary.BigEndian, crc32.ChecksumIEEE(out.Bytes()[4:])))
+	return out.Bytes()
+}
+func icc() []byte {
+	b := make([]byte, 128)
+	copy(b[8:], []byte{2, 0x10, 0, 0})
+	copy(b[12:], "mntrRGB XYZ ")
+	copy(b[36:], "acspAPPL")
+	copy(b[80:], "test")
+	put := func(at int, n float64) { binary.BigEndian.PutUint32(b[at:], uint32(n*65536+0.5)) }
+	put(68, 0.9642)
+	put(72, 1)
+	put(76, 0.8249)
+	type tag struct {
+		name string
+		data []byte
+	}
+	xyz := func(a, c, d float64) []byte {
+		v := make([]byte, 20)
+		copy(v, "XYZ ")
+		for i, n := range []float64{a, c, d} {
+			binary.BigEndian.PutUint32(v[8+i*4:], uint32(n*65536+0.5))
+		}
+		return v
+	}
+	curve := make([]byte, 16)
+	copy(curve, "curv")
+	binary.BigEndian.PutUint32(curve[8:], 1)
+	binary.BigEndian.PutUint16(curve[12:], 563)
+	desc := make([]byte, 112)
+	copy(desc, "desc")
+	binary.BigEndian.PutUint32(desc[8:], 24)
+	copy(desc[12:], "Generated color profile\x00")
+	tags := []tag{{"rXYZ", xyz(.4360747, .2225045, .0139322)}, {"gXYZ", xyz(.3850649, .7168786, .0971045)}, {"bXYZ", xyz(.1430804, .0606169, .7141733)}, {"wtpt", xyz(.9642, 1, .8249)}, {"rTRC", curve}, {"gTRC", curve}, {"bTRC", curve}, {"desc", desc}}
+	table := make([]byte, 4+12*len(tags))
+	binary.BigEndian.PutUint32(table, uint32(len(tags)))
+	pos := 128 + len(table)
+	var content bytes.Buffer
+	for i, t := range tags {
+		copy(table[4+12*i:], t.name)
+		binary.BigEndian.PutUint32(table[8+12*i:], uint32(pos))
+		binary.BigEndian.PutUint32(table[12+12*i:], uint32(len(t.data)))
+		content.Write(t.data)
+		pos += len(t.data)
+		for pos%4 != 0 {
+			content.WriteByte(0)
+			pos++
+		}
+	}
+	b = append(b, table...)
+	b = append(b, content.Bytes()...)
+	binary.BigEndian.PutUint32(b, uint32(len(b)))
+	return b
+}
+func exif(orientation uint16) []byte {
+	b := make([]byte, 26+len(private)+1)
+	copy(b, "II\x2a\x00\x08\x00\x00\x00")
+	binary.LittleEndian.PutUint16(b[8:], 1)
+	binary.LittleEndian.PutUint16(b[10:], 0x112)
+	binary.LittleEndian.PutUint16(b[12:], 3)
+	binary.LittleEndian.PutUint32(b[14:], 1)
+	binary.LittleEndian.PutUint16(b[18:], orientation)
+	copy(b[26:], private)
+	return b
+}
+func makePNG(name string, w, h, orientation int, depth bool, metadata bool) {
+	var img image.Image
+	if depth {
+		p := image.NewNRGBA64(image.Rect(0, 0, w, h))
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
+				p.SetNRGBA64(x, y, color.NRGBA64{R: 0x1234, G: 0x5678, B: 0x9abc, A: 0xffff})
+			}
+		}
+		img = p
+	} else {
+		p := image.NewNRGBA(image.Rect(0, 0, w, h))
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
+				c := color.NRGBA{R: 220, A: 255}
+				if x >= w/2 {
+					c = color.NRGBA{G: 180, A: 255}
+				}
+				if y >= h/2 {
+					c = color.NRGBA{B: 200, A: 128}
+				}
+				p.SetNRGBA(x, y, c)
+			}
+		}
+		img = p
+	}
+	var buf bytes.Buffer
+	enc := png.Encoder{CompressionLevel: png.NoCompression}
+	must(enc.Encode(&buf, img))
+	b := buf.Bytes()
+	if metadata {
+		var compressed bytes.Buffer
+		z := zlib.NewWriter(&compressed)
+		_, e := z.Write(icc())
+		must(e)
+		must(z.Close())
+		extra := chunk("iCCP", append([]byte("Generated\x00\x00"), compressed.Bytes()...))
+		gamma := make([]byte, 4)
+		binary.BigEndian.PutUint32(gamma, 100000)
+		extra = append(extra, chunk("gAMA", gamma)...)
+		extra = append(extra, chunk("eXIf", exif(uint16(orientation)))...)
+		extra = append(extra, chunk("tEXt", []byte("Description\x00"+private))...)
+		b = append(append(append([]byte{}, b[:33]...), extra...), b[33:]...)
+	}
+	write(name, b)
+}
+func makeJPEG(name string, orientation int) {
+	p := image.NewRGBA(image.Rect(0, 0, 64, 32))
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 64; x++ {
+			c := color.RGBA{R: 220, A: 255}
+			if x >= 32 {
+				c = color.RGBA{G: 180, A: 255}
+			}
+			if y >= 16 {
+				c = color.RGBA{B: 200, A: 255}
+			}
+			p.Set(x, y, c)
+		}
+	}
+	var out bytes.Buffer
+	must(jpeg.Encode(&out, p, &jpeg.Options{Quality: 100}))
+	segment := func(marker byte, data []byte) []byte {
+		b := []byte{255, marker, 0, 0}
+		binary.BigEndian.PutUint16(b[2:], uint16(len(data)+2))
+		return append(b, data...)
+	}
+	extra := segment(0xe1, append([]byte("Exif\x00\x00"), exif(uint16(orientation))...))
+	extra = append(extra, segment(0xe2, append([]byte("ICC_PROFILE\x00\x01\x01"), icc()...))...)
+	extra = append(extra, segment(0xfe, bytes.Repeat([]byte(private), 100))...)
+	b := out.Bytes()
+	write(name, append(append(append([]byte{}, b[:2]...), extra...), b[2:]...))
+}
+func metadataOf(b []byte, format string) ([]byte, bool) {
+	var profile []byte
+	sensitive := false
+	switch format {
+	case "png":
+		for pos := 8; pos+12 <= len(b); {
+			n := int(binary.BigEndian.Uint32(b[pos:]))
+			if pos+n+12 > len(b) {
+				panic("bad PNG")
+			}
+			kind := string(b[pos+4 : pos+8])
+			data := b[pos+8 : pos+8+n]
+			switch kind {
+			case "iCCP":
+				at := bytes.IndexByte(data, 0)
+				r, e := zlib.NewReader(bytes.NewReader(data[at+2:]))
+				must(e)
+				profile, e = io.ReadAll(r)
+				must(e)
+				must(r.Close())
+			case "tEXt", "zTXt", "iTXt", "eXIf":
+				sensitive = true
+			}
+			pos += n + 12
+		}
+	case "jpeg":
+		for pos := 2; pos+4 <= len(b) && b[pos] == 255; {
+			marker := b[pos+1]
+			if marker == 0xda {
+				break
+			}
+			n := int(binary.BigEndian.Uint16(b[pos+2:]))
+			if n < 2 || pos+2+n > len(b) {
+				panic("bad JPEG")
+			}
+			data := b[pos+4 : pos+2+n]
+			if marker == 0xe2 && bytes.HasPrefix(data, []byte("ICC_PROFILE\x00")) {
+				profile = append(profile, data[14:]...)
+			} else if marker == 0xe1 || marker == 0xed || marker == 0xfe {
+				sensitive = true
+			}
+			pos += n + 2
+		}
+	case "webp":
+		for pos := 12; pos+8 <= len(b); {
+			n := int(binary.LittleEndian.Uint32(b[pos+4:]))
+			if pos+8+n > len(b) {
+				panic("bad WebP")
+			}
+			kind := string(b[pos : pos+4])
+			if kind == "ICCP" {
+				profile = b[pos+8 : pos+8+n]
+			}
+			if kind == "EXIF" || kind == "XMP " {
+				sensitive = true
+			}
+			pos += 8 + n + n%2
+		}
+	}
+	return profile, sensitive
+}
+func check(name string, orientation int, depth bool, colorMode string) {
+	b := read(name)
+	img, format, e := image.Decode(bytes.NewReader(b))
+	must(e)
+	bounds := img.Bounds()
+	w, h := 64, 32
+	if len(os.Args) >= 6 {
+		w, _ = strconv.Atoi(os.Args[4])
+		h, _ = strconv.Atoi(os.Args[5])
+	}
+	if orientation >= 5 {
+		w, h = h, w
+	}
+	if bounds.Dx() != w || bounds.Dy() != h {
+		panic(fmt.Sprintf("geometry %v, expected %dx%d", bounds, w, h))
+	}
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			sx, sy := x*64/w, y*32/h
+			switch orientation {
+			case 2:
+				sx = 63 - x
+			case 3:
+				sx, sy = 63-x, 31-y
+			case 4:
+				sy = 31 - y
+			case 5:
+				sx, sy = y, x
+			case 6:
+				sx, sy = y, 31-x
+			case 7:
+				sx, sy = 63-y, 31-x
+			case 8:
+				sx, sy = 63-y, x
+			}
+			got := color.NRGBA64Model.Convert(img.At(x, y)).(color.NRGBA64)
+			switch raw := img.(type) {
+			case *image.NRGBA:
+				c := raw.NRGBAAt(x, y)
+				got = color.NRGBA64{R: uint16(c.R) * 257, G: uint16(c.G) * 257, B: uint16(c.B) * 257, A: uint16(c.A) * 257}
+			case *image.NRGBA64:
+				got = raw.NRGBA64At(x, y)
+			}
+			if depth {
+				if got.R != 0x1234 || got.G != 0x5678 || got.B != 0x9abc || got.A != 65535 {
+					panic("16-bit sample changed")
+				}
+				continue
+			}
+			want := color.NRGBA64{R: 220 * 257, A: 65535}
+			if sx >= 32 {
+				want = color.NRGBA64{G: 180 * 257, A: 65535}
+			}
+			if sy >= 16 {
+				want = color.NRGBA64{B: 200 * 257, A: 128 * 257}
+				if format == "jpeg" {
+					want.A = 65535
+				}
+			}
+			tolerance := 0
+			if len(os.Args) >= 6 {
+				tolerance = 2 * 257
+			}
+			if format != "png" {
+				tolerance = 28 * 257
+			}
+			if sx < 3 || sx > 60 || sy < 3 || sy > 28 || sx >= 29 && sx <= 34 || sy >= 13 && sy <= 18 {
+				if format != "png" || len(os.Args) >= 6 {
+					continue
+				}
+			}
+			for _, pair := range [][2]uint16{{got.R, want.R}, {got.G, want.G}, {got.B, want.B}, {got.A, want.A}} {
+				d := int(pair[0]) - int(pair[1])
+				if d < 0 {
+					d = -d
+				}
+				if d > tolerance {
+					panic(fmt.Sprintf("pixel %d,%d differs: %v %v", x, y, got, want))
+				}
+			}
+		}
+	}
+	profile, sensitive := metadataOf(b, format)
+	if sensitive || bytes.Contains(b, []byte(private)) {
+		panic("descriptive metadata retained")
+	}
+	wantProfile := icc()
+	if colorMode != "" {
+		wantProfile = nil
+	}
+	if !bytes.Equal(profile, wantProfile) {
+		panic("ICC profile changed")
+	}
+	gamma := []byte{0, 1, 0x86, 0xa0}
+	if colorMode == "srgb" {
+		gamma = []byte{0, 0, 0xb1, 0x8f}
+	}
+	if format == "png" && !bytes.Contains(b, chunk("gAMA", gamma)) {
+		panic("gamma changed")
+	}
+	if colorMode == "srgb" && !bytes.Contains(b, chunk("sRGB", []byte{2})) {
+		panic("sRGB intent changed")
+	}
+	if colorMode == "chroma" && !bytes.Contains(b, chunk("cHRM", chroma())) {
+		panic("chromaticity changed")
+	}
+	fmt.Println("complete pixels, orientation, alpha, ICC and privacy match")
+}
+func chroma() []byte {
+	var b bytes.Buffer
+	for _, v := range []uint32{31270, 32900, 68000, 32000, 30000, 60000, 15000, 6000} {
+		must(binary.Write(&b, binary.BigEndian, v))
+	}
+	return b.Bytes()
+}
+func makeColor(name string, srgb bool) {
+	makePNG(name, 64, 32, 1, false, false)
+	b := read(name)
+	g := []byte{0, 1, 0x86, 0xa0}
+	if srgb {
+		g = []byte{0, 0, 0xb1, 0x8f}
+	}
+	extra := chunk("gAMA", g)
+	if srgb {
+		extra = append(extra, chunk("sRGB", []byte{2})...)
+	} else {
+		extra = append(extra, chunk("cHRM", chroma())...)
+	}
+	extra = append(extra, chunk("tEXt", []byte("Author\x00"+private))...)
+	write(name, append(append(append([]byte{}, b[:33]...), extra...), b[33:]...))
+}
+func main() {
+	if len(os.Args) < 2 {
+		panic("mode required")
+	}
+	switch os.Args[1] {
+	case "color":
+		check(os.Args[3], 1, false, os.Args[2])
+	case "make":
+		makeColor("chroma.png", false)
+		makeColor("srgb.png", true)
+		makePNG("photo.png", 64, 32, 1, false, true)
+		write("broken.png", read("photo.png")[:50])
+		makePNG("deep.png", 64, 32, 1, true, true)
+		for n := 1; n <= 8; n++ {
+			makeJPEG(fmt.Sprintf("orientation-%d.jpg", n), n)
+			makePNG(fmt.Sprintf("png-orientation-%d.png", n), 64, 32, n, false, true)
+		}
+		makePNG("large.png", 4096, 2048, 1, false, true)
+		var b bytes.Buffer
+		b.WriteString("\x89PNG\r\n\x1a\n")
+		header := make([]byte, 13)
+		binary.BigEndian.PutUint32(header, 1)
+		binary.BigEndian.PutUint32(header[4:], 1)
+		header[8] = 1
+		b.Write(chunk("IHDR", header))
+		b.Write(chunk("IDAT", []byte{0x78, 0xda, 0x63, 0x60, 0, 0, 0, 2, 0, 1}))
+		b.Write(chunk("IEND", nil))
+		write("tiny.png", b.Bytes())
+		write("profile.icc", icc())
+	case "check":
+		n, e := strconv.Atoi(os.Args[2])
+		must(e)
+		check(os.Args[3], n, false, "")
+	case "deep":
+		check(os.Args[2], 1, true, "")
+	case "copy":
+		write(os.Args[3], read(os.Args[2]))
+	case "hash":
+		sum := sha256.Sum256(read(os.Args[2]))
+		fmt.Println(hex.EncodeToString(sum[:]))
+	case "private-webp":
+		b := read(os.Args[2])
+		data := bytes.Repeat([]byte(private), 100)
+		var c bytes.Buffer
+		c.WriteString("XMP ")
+		must(binary.Write(&c, binary.LittleEndian, uint32(len(data))))
+		c.Write(data)
+		if len(data)%2 != 0 {
+			c.WriteByte(0)
+		}
+		b = append(b, c.Bytes()...)
+		binary.LittleEndian.PutUint32(b[4:], uint32(len(b)-8))
+		if string(b[12:16]) == "VP8X" {
+			b[20] |= 4
+		}
+		write(os.Args[2], b)
+	case "header":
+		b := read("photo.png")
+		binary.BigEndian.PutUint32(b[16:], 50000)
+		binary.BigEndian.PutUint32(b[29:], crc32.ChecksumIEEE(b[12:29]))
+		write("expansion.png", b)
+		binary.BigEndian.PutUint32(b[16:], 10000)
+		binary.BigEndian.PutUint32(b[20:], 5000)
+		binary.BigEndian.PutUint32(b[29:], crc32.ChecksumIEEE(b[12:29]))
+		write("expansion-pixels.png", b)
+	case "animated":
+		b := read("photo.png")
+		c := chunk("acTL", []byte{0, 0, 0, 2, 0, 0, 0, 0})
+		write("animated.png", append(append(append([]byte{}, b[:33]...), c...), b[33:]...))
+	case "mode":
+		info, e := os.Stat(os.Args[2])
+		must(e)
+		mode, e := strconv.ParseUint(os.Args[3], 8, 32)
+		must(e)
+		if info.Mode().Perm() != os.FileMode(mode) {
+			panic("input permission bits changed")
+		}
+	case "clean":
+		paths, e := filepath.Glob(".ncly-image-shrink-*")
+		must(e)
+		if len(paths) != 0 {
+			panic("staging remains")
+		}
+	case "huge":
+		f, e := os.Create("huge.png")
+		must(e)
+		must(f.Truncate((64 << 20) + 1))
+		must(f.Close())
+	case "examples":
+		makePNG("photo.png", 64, 32, 1, false, true)
+		b := read("photo.png")
+		write("testdata/examples.txtar", append([]byte("# Generated by the imageproof helper of acceptance.txtar.\n-- photo.png --\n"), b...))
+	default:
+		panic("unknown mode " + strings.Join(os.Args[1:], " "))
+	}
+}

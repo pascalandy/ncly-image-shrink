@@ -20,18 +20,14 @@ var locales embed.FS
 //go:embed skill
 var skill embed.FS
 
-//go:embed worker
-var workers embed.FS
-
 // Extension is the image-shrink extension. Each command of manifest.toml that
 // runs has its handler here, keyed by its path.
 var Extension = extension.Extension{
-	Manifest:  manifest,
-	Locales:   locales,
-	Skill:     skill,
-	Resources: workers,
+	Manifest: manifest,
+	Locales:  locales,
+	Skill:    skill,
 	Handlers: map[string]extension.Handler{
-		"image shrink": inspect,
+		"image shrink": shrink,
 	},
 }
 

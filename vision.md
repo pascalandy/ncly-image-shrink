@@ -1,18 +1,11 @@
 # image-shrink vision
 
-This file is a form filled for the example command, `ncly image shrink`.
-It inspects a file until you replace it.
-Replace the text of each part, then delete each line that starts with "Fill:".
-
-Fill: one sentence that states the job of the extension, and for whom.
-
-`ncly image shrink` gives the size and the line count of a file, so an agent knows what it will read. The extension meets "What a great extension does", in the contract that `just contract` prints.
+`ncly image shrink` makes one local image smaller and removes its descriptive metadata, for people sharing a copy.
 
 ## Wraps
 
-Fill: the source and the revision of each program or script that a command wraps, such as a Git URL and a commit.
-
-- `worker/inspect.py`, which the extension template wrote
+- libvips 8.18.7 or later, through `vips`. JPEG and WebP use thumbnail. PNG prepares orientation and resizing at native precision in Go, then uses the lossless vips saver
+- Go image decoders and `golang.org/x/image`, pinned in go.mod, validate input and output without asking the image program to judge itself
 
 ## Intake
 
@@ -28,6 +21,7 @@ Fill: the source and the revision of each program or script that a command wraps
 - The wrapper needs no key, login, network, or payment. It accepts only validated JPEG, PNG and static WebP bytes, uses fixed private snapshot names, and never relays an operation or loader option from a user path. It removes the snapshot after the call. Inference: no source gives it
 - Resource policy: cap compressed input at 64 MiB and expanded input at 40 million pixels before decoding. Limit the vips call, including its version probe, to 30 seconds. One processing thread and a 64 MiB operation cache reduce memory use, but that cache is not an operating-system memory ceiling. Inference: no source gives it
 - Display declarations to cover are EXIF orientation, ICC color profiles, PNG gamma and chromaticity, PNG bit depth and transparency, JPEG CMYK and Adobe markers, and WebP alpha. Multipage JPEG and animated PNG or WebP must be refused instead of losing parts. Inference: no source gives it
+- Thumbnail always converts or exports at depth 8. PNG must therefore prepare orientation and resizing at native precision before vips copy compresses it, so a 16-bit input is not quantized. Source: https://github.com/libvips/libvips/blob/v8.18.7/libvips/resample/thumbnail.c, at v8.18.7. Read: vips_thumbnail_build, non-linear processing-space conversion and the Colour management block stating that export always uses depth 8
 
 **Experiments.**
 
@@ -35,6 +29,4 @@ Fill: the source and the revision of each program or script that a command wraps
 
 ## Refuses
 
-Fill: what the extension will not do, and why.
-
-- It never changes a file: it only reads
+The command refuses animation, multiple pictures, unsupported formats, excessive input budgets, unsafe output paths, and candidates that save no bytes. It publishes a completed copy only after image, size and profile checks.
