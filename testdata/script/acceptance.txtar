@@ -223,7 +223,17 @@ protect photo.png photo.shrunk.png
 keeps 1 ncly image shrink photo.png
 stderr '"code":"IMAGE_SHRINK_RESULT"'
 
+# A non-writable destination makes the publication failure observable on
+# macOS too, where the Linux syscall-denial guard is unavailable.
 # spec: publish-fails
+env STUB=
+mkdir locked
+cp photo.png locked/photo.png
+chmod 500 locked
+protect locked/photo.png locked/photo.shrunk.png
+keeps 1 ncly image shrink locked/photo.png
+stderr '"code":"IMAGE_SHRINK_PUBLISH"'
+chmod 700 locked
 env STUB=
 protect photo.png photo.shrunk.png
 [linux] without link keeps 1 ncly image shrink photo.png
