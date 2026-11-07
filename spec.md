@@ -74,6 +74,7 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | Orientation and color | Output: Keeps data that a reader needs; Output: Loses data that changes the meaning | `orientation`, `profile`, `png-color`, `alpha`, `depth` | `invalid-result` |
 | PNG display declarations | Intake: gAMA, cHRM, sRGB and cICP layouts, values, cardinality and conflicts | `png-color`, `privacy` | `input-invalid`, `invalid-result` |
 | Compatible sample models and profiles | Intake: Gray, Gray-alpha at 8/16 bits, RGB and CMYK profiles, orientation and resize | `profile`, `pixels`, `alpha`, `depth` | `input-invalid`, `invalid-result` |
+| PNG transparency representations | Intake: Gray tRNS at 1/2/4/8/16 bits, RGB and palette tRNS, explicit alpha | `alpha`, `pixels`, `profile` | `input-invalid` |
 | JPEG display declarations | Intake: Adobe RGB/YCbCr/CMYK/YCCK and JFIF | `pixels`, `profile` | `input-invalid` |
 | Strict byte saving | Intake: output size | `smaller` | `not-smaller` |
 | Interruption and cleanup | Interruption: SIGINT or SIGTERM during the work; Interruption: Timeout | `publication` | `interrupted`, `terminated`, `worker-fails` |
