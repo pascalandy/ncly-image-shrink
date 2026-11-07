@@ -1,100 +1,90 @@
 # image-shrink spec
 
-`manifest.toml` holds the machine facts of each command, and `ncly describe image shrink --json` shows them. This file holds only what the manifest cannot say, so it never repeats a flag or a type.
-
-Each line of Failures and Acceptance has the state `proven`: a test claims it, and the test kit requires that claim.
-A line that no test proves yet has the state `open`, and waits under `## Open lines`.
-A line that the user accepted as a limit has the state `limit`, in a table under **Limits.** of its command.
-`just finish` fails while a line is open, or while a limit has no record of the user's acceptance.
-
-This file is a form filled for the example command, `ncly image shrink`.
-It inspects a file until you replace it.
-Give each command a section like that one, then delete each line that starts with "Fill:".
-
-Fill: for each command, what proves its success, why each declared effect exists, and each failure with its code.
-
-Fill: start each line of Failures and of Acceptance with its own spec ID, such as `bad-input`. Then claim each ID with a line `# spec: <id>` in the test that proves it. `test-kit.md` in the folder that `just contract` prints defines both.
-
-Fill: write every line of a command in its first pull request, from the generic cases of the contract and the cases of the program. The skill in `.agents/skills/nicely-extension/` says how.
-
-Fill: the failure of an input that exists but that the wrapped program cannot read, with a `IMAGE_SHRINK_` code and exit 2. A dry run, when the command has one, gives the same failure.
-
-Fill: each limit that the user accepted, as a row of a table under **Limits.**, with the columns ID, State, Limit, and Accepted. A limit never contradicts a line of Failures or of Acceptance.
+The manifest holds command syntax and result types. Each line below has a spec ID. A line without a passing scenario stays under Open lines.
 
 ## ncly image shrink
 
-**Success means** that the answer holds `size_bytes` and `lines`, which `worker/inspect.py` counted in one read of the file.
+**Success means** one smaller image exists beside the input, in the same format. The input stays unchanged. The output name inserts `.shrunk` before the original extension, preserving its spelling and case.
 
-**Effects.** None: the command reads the file, and writes, bills, and calls nothing.
-The dry run makes the same free inspection and gives the same result.
+**Effects.** The run writes one output and private staging beside it. It uses no network, key, or paid service. The dry run reads and validates the input and checks the program, then reports its destination. It creates no stage. Compression and publication remain pending until the run.
+
+**Resources.** Before decoding, reject an input above 64 MiB or 40 million pixels. The vips probe and operation share a 30-second deadline. vips uses one processing thread and a 64 MiB cache. That cache is not a hard process-memory limit. Decoding and metadata checks use the bounded input in memory.
+
+**Publication policy.** Staging uses an unpredictable directory with mode 0700 and files with mode 0600. A new shared copy has mode 0600. Replacement preserves the existing regular file's permission bits. Publication uses a hard link for create and a rename for replace. A failure before publication keeps the existing output. A failure after publication keeps the completed output and reports its path and the error. Symbolic-link outputs and outputs hard-linked to the input are refused even with force.
 
 **Failures.**
 
-| ID | Condition | Code |
-|---|---|---|
-| `bad-input` | The file is missing or is no regular file, or `--timeout` is no duration | `USAGE_INVALID` |
-| `no-python` | `python3` is missing or older than 3.9, or its version probe fails or does not finish within 10 s | `PREREQ_MISSING` |
-| `worker-fails` | `python3` exits with a code other than 0, its output is missing, malformed, or over 1 MB, or the timeout expires, even during the probe | `RUNTIME` |
-| `interrupted` | Ctrl-C arrives | `INTERRUPTED` |
-| `terminated` | SIGTERM arrives | `TERMINATED` |
+None proven yet.
 
 **Limits.** None.
 
 ## Acceptance
 
-The real input is a short Markdown file. Without a fixture, `acceptance.sh` makes one. The answer keeps these properties of the input:
+Tests generate all images. The real acceptance input is a generated PNG with colored quadrants, transparency and a private location block. An optional fixture replaces it and receives the same size, format, privacy and geometry checks. Independent Go image decoders inspect complete pixel content. Container readers inspect metadata. References come from the generated image's declared pixels, orientation and color data.
 
-- `size`: `size_bytes` is the size that `wc -c` gives
-- `lines`: `lines` is the line count that `awk` gives, where a last line without a newline counts too
-
-| ID | Input that `python3` accepts | Code |
-|---|---|---|
-| `not-text` | A file that holds a NUL byte, such as an image, whose lines mean nothing | `IMAGE_SHRINK_NOT_TEXT` |
-
-Fill: the real input that proves the command, such as a fixture of the registry of Nicely, and the properties that the output keeps. `acceptance.sh` checks each property.
-
-Fill: each input that the wrapped program accepts but that the domain refuses, with its code. A scenario and `acceptance.sh` refuse each one.
+None proven yet.
 
 ## Case matrix
 
-Before the review of round 1, this table lists each family of cases of each command, with the spec IDs of its tests (#423).
-A family comes from a generic case that applies, or from a family that the intake found.
-An example of such a family is each way that the input declares how to read it.
-Accepted names the lines whose tests give an input that passes. Refused names the lines whose tests refuse an input, or `None`.
-An accepted privacy limit names its ID in Accepted for every applicable Output case.
-The Limit cell declares the same `Output: <case>` bindings, separated from its description by semicolons.
-Bindings can come before or after the description. Its own ID or bindings alone do not describe retained data.
-A semicolon-separated part that equals `None` or starts with `Fill:` prevents acceptance. These comparisons ignore case.
-Its acceptance case uses `reads -case '<case>' -limit <id>` and independently checks the retained metadata and nondefault display declaration.
-Each refusal and each branch that classifies an input has a pair: a test that passes, and a test that refuses.
-Each line of Failures and of Acceptance is in a family. `just finish` fails when a family has no test.
-A repair of a finding adds a pair of tests for its whole family, not only a test of the reported example.
-
 | Family | Source | Accepted | Refused |
 |---|---|---|---|
-| The input is a regular file that exists | Input: Unreadable | `size`, `lines` | `bad-input` |
-| The input holds text | Input: Of the wrong type | `lines` | `not-text` |
-| `python3` runs the worker | Other: Missing program, and the intake | `size` | `no-python`, `worker-fails` |
-| A signal stops the run | Interruption | `size` | `interrupted`, `terminated` |
-
-Fill: one row for each family of cases of your commands, in place of the rows of `inspect`.
+| A readable local input | Input: Empty; Input: Truncated; Input: Unreadable | `pixels` | `input-invalid` |
+| Only JPEG, PNG and WebP | Input: Of the wrong type; Input: With active content | `format` | `unsupported` |
+| Bounded work | Input: Very large; Input: Large expansion | `geometry` | `budget` |
+| One image, without animation | Input: With several parts | `format` | `multipart` |
+| Safe file names | File name: Spaces; File name: Leading dash; File name: Shell characters | `names` | `input-invalid` |
+| Existing output | Output: Exists, without --force | `replace` | `exists` |
+| Link output | Output: Is a link to the input | `pixels` | `output-link` |
+| Concurrent output | Output: Appears during the run, without --force | `publication` | `race` |
+| Private staging | Output: Temporary file | `staging` | `worker-fails` |
+| Descriptive metadata | Output: Keeps private data of the input | `privacy` | `invalid-result` |
+| Orientation and color | Output: Keeps data that a reader needs; Output: Loses data that changes the meaning | `orientation`, `profile`, `png-color`, `alpha`, `depth` | `invalid-result` |
+| Strict byte saving | Intake: output size | `smaller` | `not-smaller` |
+| Interruption and cleanup | Interruption: SIGINT or SIGTERM during the work; Interruption: Timeout | `publication` | `interrupted`, `terminated`, `worker-fails` |
+| Faithful dry run | Other: Dry run | `preview` | `input-invalid`, `exists` |
+| Installed program | Other: Missing program | `pixels` | `no-vips`, `worker-fails` |
+| Valid command options | Intake: bounded geometry and quality | `geometry`, `quality` | `options` |
+| Publication errors | Publication: create and replace | `publication`, `replace` | `publish-fails` |
 
 ## Publication
 
-This part declares each command that creates or replaces a user file, as `publication.md` in the folder that `just contract` prints defines.
-`just check` fails when a command whose effects set `user_writes` has no row.
-It also fails when no scenario proves an obligation of a row, and no reason covers it.
-
-None: `ncly image shrink` creates or replaces no user file.
-
-Fill: for a command that publishes a file, a table with the columns Command, Mode, Destination, Overwrite, Protected, Operation, and Dry run. Give each mode one row.
-
-Fill: a second table with the columns Command, Mode, Obligation, and Reason, for each obligation that no scenario proves.
+| Command | Mode | Destination | Overwrite | Protected | Operation | Dry run |
+|---|---|---|---|---|---|---|
+| `ncly image shrink` | create | `output` | `overwrite` | `file` | `link` | pending |
+| `ncly image shrink` | replace | `output` | `overwrite` | `file` | `rename` | pending |
 
 ## Open lines
 
-A round of the skill in `.agents/skills/nicely-extension/` moves an open line into Failures or Acceptance, with the scenario that claims it.
-
-None.
-
-Fill: each line that no test proves yet, in a table with the columns ID, Command, Part, Case, and Code. Each finding that `review.toml` records as `open` names the ID of its row, so `spec.md` and the ledger agree. The test kit does not read this part.
+| ID | Command | Part | Case | Code |
+|---|---|---|---|---|
+| `input-invalid` | `ncly image shrink` | Failures | Missing, empty, unreadable, truncated or malformed input is refused before vips starts, naming the input | `IMAGE_SHRINK_INPUT` |
+| `unsupported` | `ncly image shrink` | Failures | A format outside JPEG, PNG or WebP, or an extension that disagrees with its bytes, is refused before vips starts | `IMAGE_SHRINK_FORMAT` |
+| `budget` | `ncly image shrink` | Failures | Compressed input above 64 MiB, over 40 million pixels, or a dimension above 40000 is refused before full decoding | `IMAGE_SHRINK_LIMIT` |
+| `multipart` | `ncly image shrink` | Failures | Animated PNG or WebP and multipicture JPEG are refused instead of discarding frames | `IMAGE_SHRINK_MULTIPART` |
+| `options` | `ncly image shrink` | Failures | Invalid size, quality or timeout values are refused | `USAGE_INVALID` |
+| `exists` | `ncly image shrink` | Failures | Existing output without force is refused before work and kept | `IMAGE_SHRINK_EXISTS` |
+| `output-link` | `ncly image shrink` | Failures | A symbolic-link output, nonregular output or output hard-linked to the input is refused, with or without force | `IMAGE_SHRINK_OUTPUT` |
+| `race` | `ncly image shrink` | Failures | Output appearing during create is kept unchanged and the run fails | `IMAGE_SHRINK_EXISTS` |
+| `no-vips` | `ncly image shrink` | Failures | Missing or too-old vips and failed version probes receive the install hint | `PREREQ_MISSING` |
+| `worker-fails` | `ncly image shrink` | Failures | Nonzero vips exit, missing output or timeout fails without publishing, keeping the old output and naming the input | `RUNTIME` |
+| `invalid-result` | `ncly image shrink` | Failures | A damaged, wrong-format, wrong-size, metadata-bearing output or lost ICC is refused before publication | `IMAGE_SHRINK_RESULT` |
+| `publish-fails` | `ncly image shrink` | Failures | Unsupported or failed publication fails closed and keeps any old output | `IMAGE_SHRINK_PUBLISH` |
+| `not-smaller` | `ncly image shrink` | Acceptance | An optimized image whose candidate is not strictly smaller is refused with no new output, keeping an old one | `IMAGE_SHRINK_NOT_SMALLER` |
+| `format` | `ncly image shrink` | Acceptance | JPEG, PNG and static WebP output keep the input format | - |
+| `smaller` | `ncly image shrink` | Acceptance | The published copy has strictly fewer bytes than the input | - |
+| `pixels` | `ncly image shrink` | Acceptance | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing | - |
+| `geometry` | `ncly image shrink` | Acceptance | The longest side fits the chosen bound, defaults to 2048, retains aspect ratio within pixel rounding, and never enlarges | - |
+| `quality` | `ncly image shrink` | Acceptance | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding | - |
+| `orientation` | `ncly image shrink` | Acceptance | All eight EXIF orientations are applied to the pixels before orientation metadata is removed | - |
+| `profile` | `ncly image shrink` | Acceptance | The complete ICC color profile is retained | - |
+| `png-color` | `ncly image shrink` | Acceptance | PNG gamma, chromaticity and sRGB declarations retain their display meaning | - |
+| `alpha` | `ncly image shrink` | Acceptance | PNG and WebP retain transparency | - |
+| `depth` | `ncly image shrink` | Acceptance | PNG retains its 16-bit sample precision | - |
+| `privacy` | `ncly image shrink` | Acceptance | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata | - |
+| `names` | `ncly image shrink` | Acceptance | Paths with spaces, leading dashes, shell characters or loader-option characters are data, and output stays beside the input | - |
+| `preview` | `ncly image shrink` | Acceptance | Dry run changes no file, shares input and conflict checks, reports output and overwrite, and marks compression and the publication operation pending | - |
+| `staging` | `ncly image shrink` | Acceptance | Private exclusive staging cannot follow a planted temporary symlink and is removed on success, failure and signals | - |
+| `publication` | `ncly image shrink` | Acceptance | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process | - |
+| `replace` | `ncly image shrink` | Acceptance | Force atomically replaces only the completed output and keeps the replaced regular file's permissions | - |
+| `interrupted` | `ncly image shrink` | Failures | Ctrl-C names the input, keeps old output and removes staging | `INTERRUPTED` |
+| `terminated` | `ncly image shrink` | Failures | SIGTERM names the input, keeps old output and removes staging | `TERMINATED` |
