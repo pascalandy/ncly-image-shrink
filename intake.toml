@@ -1,44 +1,64 @@
-# The intake record of the extension. build-records.md, in the folder that
-# just contract prints, defines its keys. just records writes the part
-# ## Intake of vision.md from it, and just finish reads only this record.
-#
-# This record is filled for the example command. It inspects a file until you
-# replace it. Replace its facts, then delete each line that starts with "# Fill:".
-#
-# Fill: each fact of the intake of each wrapped program: its effects, its exit codes, its resource use, and its known failures.
-# Fill: each declaration of the input that changes how a reader shows the content.
-# Fill: a fact that a source gives is sourced, with the source, its revision, and the part that you read. A link alone is not evidence of a read.
-# Fill: a fact that no source gives is an inference, or an unknown fact with the spec ID of its open line in spec.md.
-# Fill: the result of each experiment, apart from the facts.
+[[facts]]
+kind = "sourced"
+statement = "Program: vips thumbnail reads one local image and writes the path selected by its output suffix. CLI options follow the operation. It does not ask a question."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/doc/using-the-cli.md"
+revision = "v8.18.7"
+read = "Optional arguments and Implicit file format conversion, including bracketed loader and saver options"
 
 [[facts]]
 kind = "sourced"
-statement = "Effects: `worker/inspect.py` reads the file once, in chunks of 64 KiB, and writes nothing"
-source = "`worker/inspect.py` of the template"
-revision = "the Nicely version that `go.mod` pins"
-read = "the function `main`"
+statement = "Geometry: thumbnail fits inside a square, applies EXIF orientation by default, and size=down prevents enlargement. Without an output_profile it does not request an ICC transform."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/libvips/resample/thumbnail.c"
+revision = "v8.18.7"
+read = "vips_thumbnail documentation and vips_thumbnail_build, especially needs_icc_transform, size, and auto_rotate"
 
 [[facts]]
 kind = "sourced"
-statement = "Exit codes: 0 with one JSON object on stdout, and 2 for a wrong argument count"
-source = "`worker/inspect.py` of the template"
-revision = "the Nicely version that `go.mod` pins"
-read = "`main` and the last two lines of the file"
+statement = "Privacy: keep=icc drops EXIF, XMP, IPTC and optional comments while retaining ICC. An incompatible ICC can be silently dropped, so the adapter must verify preservation before publication."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/libvips/foreign/foreign.c"
+revision = "v8.18.7"
+read = "vips_foreign_get_keep, vips_foreign_save_remove_metadata and vips__foreign_update_metadata"
 
 [[facts]]
 kind = "sourced"
-statement = "Resource use: memory stays near one chunk, whatever the size of the file"
-source = "`worker/inspect.py` of the template"
-revision = "the Nicely version that `go.mod` pins"
-read = "the loop of `main`"
+statement = "JPEG quality is Q, with optimized Huffman coding available. The output is lossy."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/libvips/foreign/jpegsave.c"
+revision = "v8.18.7"
+read = "vips_jpegsave documentation, Q and optimize_coding"
 
 [[facts]]
 kind = "sourced"
-statement = "Known failures: Python raises an error and exits 1 on a file that it cannot open"
-source = "`worker/inspect.py` of the template"
-revision = "the Nicely version that `go.mod` pins"
-read = "the call to `open` in `main`, which nothing catches"
+statement = "PNG uses lossless compression from 0 to 9. Palette quantization is optional and must remain disabled. RGB, alpha, monochrome and 16-bit samples are supported."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/libvips/foreign/pngsave.c"
+revision = "v8.18.7"
+read = "vips_pngsave documentation, compression, palette and bitdepth"
+
+[[facts]]
+kind = "sourced"
+statement = "WebP defaults to lossy compression controlled by Q. Alpha quality defaults to 100. Animated input can have several frames, but thumbnail defaults to only the first frame, so the adapter must refuse animation."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/libvips/foreign/webpsave.c and libvips/resample/thumbnail.c"
+revision = "v8.18.7"
+read = "vips_webpsave documentation, Q, alpha_q and lossless, and vips_thumbnail documentation on first-frame loading"
+
+[[facts]]
+kind = "sourced"
+statement = "Exit codes: vips exits 0 on success and nonzero on error. Its loaders are permissive by default. fail_on=warning requests a refusal instead of publishing damaged input."
+source = "https://github.com/libvips/libvips/blob/v8.18.7/man/vips.1 and libvips/resample/thumbnail.c"
+revision = "v8.18.7"
+read = "RETURN VALUE and vips_thumbnail documentation on fail_on"
+
+[[facts]]
+kind = "inference"
+statement = "The wrapper needs no key, login, network, or payment. It accepts only validated JPEG, PNG and static WebP bytes, uses fixed private snapshot names, and never relays an operation or loader option from a user path. It removes the snapshot after the call."
+
+[[facts]]
+kind = "inference"
+statement = "Resource policy: cap compressed input at 64 MiB and expanded input at 40 million pixels before decoding. Limit the vips call, including its version probe, to 30 seconds. One processing thread and a 64 MiB operation cache reduce memory use, but that cache is not an operating-system memory ceiling."
+
+[[facts]]
+kind = "inference"
+statement = "Display declarations to cover are EXIF orientation, ICC color profiles, PNG gamma and chromaticity, PNG bit depth and transparency, JPEG CMYK and Adobe markers, and WebP alpha. Multipage JPEG and animated PNG or WebP must be refused instead of losing parts."
 
 [[experiments]]
-command = "python3 worker/inspect.py notes.md"
-result = "on a file of three lines, the last without a newline, it printed `\"lines\": 3` and exited 0"
+command = "vips --version"
+result = "Exit 0, vips-8.18.7 on om1. stderr also warns that the optional openslide plugin cannot load libopenslide.so.1. The selected JPEG, PNG and WebP operations do not use that plugin."
