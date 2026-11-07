@@ -1,5 +1,5 @@
 // Package image is the image-shrink extension of Nicely. Its one value,
-// Extension, holds the manifest, the catalogs, the skill, the workers, and
+// Extension, holds the manifest, the catalogs, the skill, and
 // one handler per command. cmd/ncly-image-shrink runs it, and
 // extension_test.go tests it.
 package image
@@ -7,7 +7,6 @@ package image
 import (
 	"embed"
 
-	"github.com/pascalandy/nicely/sdk/contract"
 	"github.com/pascalandy/nicely/sdk/extension"
 )
 
@@ -29,11 +28,4 @@ var Extension = extension.Extension{
 	Handlers: map[string]extension.Handler{
 		"image shrink": shrink,
 	},
-}
-
-// usage returns the USAGE_INVALID outcome of a message, with a call that
-// works as its hint.
-func usage(message, hint string) contract.Outcome {
-	problem := contract.Problem{Code: contract.UsageInvalid, Message: message, Hint: hint}
-	return contract.Outcome{Errors: []contract.Problem{problem}}
 }
