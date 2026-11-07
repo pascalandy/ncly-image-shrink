@@ -68,6 +68,19 @@ exec bin/imageproof match kernel-turn-8.png kernel-turn-8.shrunk.png 19
 exec bin/imageproof wrong-pixels kernel-turn-8.shrunk.png kernel-turn-8-bad.png transparent
 reads kernel-turn-8.shrunk.png reference kernel-turn-8-bad.png bin/imageproof match kernel-turn-8.png '{}' 19
 
+# Mixed 2-D colors and partial alpha exercise both convolution axes.
+# spec: pixels alpha orientation depth
+exec bin/imageproof frequency-fixture kernel-grid.png 133 67 1 16 grid
+ncly image shrink kernel-grid.png --max-side 19 --json
+exec bin/imageproof match kernel-grid.png kernel-grid.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-grid.shrunk.png kernel-grid-bad.png transparent
+reads kernel-grid.shrunk.png reference kernel-grid-bad.png bin/imageproof match kernel-grid.png '{}' 19
+exec bin/imageproof frequency-fixture kernel-grid-turn.png 143 79 8 8 grid
+ncly image shrink kernel-grid-turn.png --max-side 19 --json
+exec bin/imageproof match kernel-grid-turn.png kernel-grid-turn.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-grid-turn.shrunk.png kernel-grid-turn-bad.png transparent
+reads kernel-grid-turn.shrunk.png reference kernel-grid-turn-bad.png bin/imageproof match kernel-grid-turn.png '{}' 19
+
 # spec: preview smaller format pixels privacy profile png-color alpha quality publication staging
 symlink photo.shrunk.png.tmp -> photo.png
 protect photo.png photo.shrunk.png.tmp
@@ -1382,7 +1395,7 @@ func main() {
 		must(e)
 		o, e := strconv.Atoi(os.Args[5])
 		must(e)
-		frequencyFixture(os.Args[2], w, h, o, os.Args[6] == "16", os.Args[7] == "alpha")
+		frequencyFixture(os.Args[2], w, h, o, os.Args[6], os.Args[7])
 	case "wrong-pixels":
 		wrongPixels(os.Args[2], os.Args[3], os.Args[4])
 	case "profile-envelopes":
@@ -1503,9 +1516,9 @@ func main() {
 }
 
 // compareFixture uses the supplied input as an independent pixel reference.
-// Every source sample contributes its fractional overlap to a box reference.
-// Every pixel is checked. Per-pixel bounds cover kernel ringing and lossy
-// coding, while tighter whole-image bounds reject accumulated distortion.
+// PNG reductions use an independently evaluated cubic convolution. Lossy
+// formats use complete-area integration with codec/kernel error bounds.
+// Every output pixel and the whole-image error are checked in both paths.
 func compareFixture(input, output string, side int) {
 	inBytes, outBytes := read(input), read(output)
 	src, format, err := image.Decode(bytes.NewReader(inBytes))
@@ -1546,10 +1559,20 @@ func compareFixture(input, output string, side int) {
 		panic("fixture geometry changed")
 	}
 	resized := dw != ow || dh != oh
+	var cubic func(int, int) [4]float64
+	if format == "png" && resized {
+		cubic = cubicReference(src, orient, ow, oh, dw, dh)
+	}
 	var differences [4]uint64
+	var largest [4]uint64
 	for y := 0; y < dh; y++ {
 		for x := 0; x < dw; x++ {
-			expected := areaReference(src, orient, ow, oh, dw, dh, x, y)
+			var expected [4]float64
+			if cubic != nil {
+				expected = cubic(x, y)
+			} else {
+				expected = areaReference(src, orient, ow, oh, dw, dh, x, y)
+			}
 			r, g, bv, a := dst.At(x, y).RGBA()
 			for c, v := range []uint32{r, g, bv, a} {
 				e := int64(math.Round(expected[c]))
@@ -1558,9 +1581,8 @@ func compareFixture(input, output string, side int) {
 					d = -d
 				}
 				// Exact PNG copies retain samples, allowing only a few
-				// 16-bit unassociated-alpha rounding units. Resampling uses
-				// a different kernel than this box reference. Lossy chroma
-				// coding also blends boundaries, hence the bounded margin.
+				// 16-bit unassociated-alpha rounding units. Lossy chroma
+				// coding and its resampling kernels blend boundaries.
 				limit := int64(8)
 				if resized || format != "png" {
 					limit = 40 * 257
@@ -1571,10 +1593,19 @@ func compareFixture(input, output string, side int) {
 				if c == 3 && !resized {
 					limit = 8
 				}
+				if cubic != nil {
+					// Two 8-bit levels cover association and saver rounding.
+					// Wide PNG has no 8-bit quantization allowance.
+					limit = 2 * 257
+					if inBytes[24] == 16 {
+						limit = 8
+					}
+				}
 				if d > limit {
 					panic(fmt.Sprintf("fixture pixel %d,%d channel %d differs by %d, bound %d", x, y, c, d, limit))
 				}
 				differences[c] += uint64(d)
+				largest[c] = max(largest[c], uint64(d))
 			}
 		}
 	}
@@ -1589,6 +1620,12 @@ func compareFixture(input, output string, side int) {
 			// Keep the 20-level per-pixel cap and a 4/255 mean alpha cap.
 			if resized {
 				limit = 4 * 257
+			}
+		}
+		if cubic != nil {
+			limit = 257
+			if inBytes[24] == 16 {
+				limit = 8
 			}
 		}
 		if d > uint64(dw)*uint64(dh)*limit {
@@ -1609,6 +1646,9 @@ func compareFixture(input, output string, side int) {
 			}
 			pos += 12 + n
 		}
+	}
+	if cubic != nil {
+		fmt.Printf("independent cubic: %d pixels, maximum RGBA error %v in 16-bit units\n", dw*dh, largest)
 	}
 	fmt.Println("complete pixels, orientation, alpha, ICC and privacy match")
 }
@@ -2421,21 +2461,29 @@ func transparencyFixture(name string, depth, model byte, orient int) {
 	write(name, out)
 }
 
-func frequencyFixture(name string, w, h, orient int, wide, alpha bool) {
+func frequencyFixture(name string, w, h, orient int, depth, pattern string) {
 	p := image.NewNRGBA64(image.Rect(0, 0, w, h))
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			c := color.NRGBA64{A: 65535}
 			if x%2 == 0 {
 				c.R, c.G, c.B = 65535, 65535, 65535
-			} else if alpha {
+			} else if pattern == "alpha" {
 				c.A = 0
+			}
+			if pattern == "grid" {
+				c = color.NRGBA64{
+					R: uint16((x*53+y*97)%256) * 257,
+					G: uint16((x*17+y*43)%256) * 257,
+					B: uint16((x*29+y*13)%256) * 257,
+					A: uint16((x*31+y*19)%256) * 257,
+				}
 			}
 			p.SetNRGBA64(x, y, c)
 		}
 	}
 	var src image.Image = p
-	if !wide {
+	if depth != "16" {
 		n := image.NewNRGBA(p.Bounds())
 		for y := 0; y < h; y++ {
 			for x := 0; x < w; x++ {
@@ -2527,7 +2575,6 @@ func emptyProfiles() {
 func areaReference(src image.Image, orient, ow, oh, dw, dh, x, y int) [4]float64 {
 	x0, x1 := float64(x)*float64(ow)/float64(dw), float64(x+1)*float64(ow)/float64(dw)
 	y0, y1 := float64(y)*float64(oh)/float64(dh), float64(y+1)*float64(oh)/float64(dh)
-	sw, sh := src.Bounds().Dx(), src.Bounds().Dy()
 	var sum [4]float64
 	for by := int(math.Floor(y0)); by < int(math.Ceil(y1)); by++ {
 		wy := math.Min(y1, float64(by+1)) - math.Max(y0, float64(by))
@@ -2536,26 +2583,8 @@ func areaReference(src image.Image, orient, ow, oh, dw, dh, x, y int) [4]float64
 			if weight <= 0 {
 				continue
 			}
-			sx, sy := ax, by
-			switch orient {
-			case 2:
-				sx = sw - 1 - ax
-			case 3:
-				sx, sy = sw-1-ax, sh-1-by
-			case 4:
-				sy = sh - 1 - by
-			case 5:
-				sx, sy = by, ax
-			case 6:
-				sx, sy = by, sh-1-ax
-			case 7:
-				sx, sy = sw-1-by, sh-1-ax
-			case 8:
-				sx, sy = sw-1-by, ax
-			}
-			r, g, b, a := referenceSample(src, sx, sy)
-			for c, v := range []uint32{r, g, b, a} {
-				sum[c] += float64(v) * weight
+			for c, v := range orientedSample(src, orient, ax, by) {
+				sum[c] += v * weight
 			}
 		}
 	}
@@ -2564,6 +2593,111 @@ func areaReference(src image.Image, orient, ow, oh, dw, dh, x, y int) [4]float64
 		sum[c] /= area
 	}
 	return sum
+}
+
+type weightedSample struct {
+	index  int
+	weight float64
+}
+
+// Catmull-Rom is the interpolating BC cubic with B=0, C=1/2. Evaluate
+// its polynomial directly, rather than calling the product's x/image scaler.
+// Pixel centres are half a pixel from cell edges. Reduction widens support;
+// clipping at image edges renormalizes the surviving signed contributions.
+func cubicWeights(source, destination int) [][]weightedSample {
+	weights := make([][]weightedSample, destination)
+	width := math.Max(1, float64(source)/float64(destination))
+	for d := range weights {
+		centre := float64((2*d+1)*source-destination) / float64(2*destination)
+		total := 0.0
+		for s := max(0, int(math.Ceil(centre-2*width))); s <= min(source-1, int(math.Floor(centre+2*width))); s++ {
+			t := math.Abs(float64(s)-centre) / width
+			value := 0.0
+			if t <= 1 {
+				value = 1 + t*t*(3*t-5)/2
+			} else if t < 2 {
+				value = (2 - t) * (2 - t) * (1 - t) / 2
+			}
+			if value != 0 {
+				weights[d] = append(weights[d], weightedSample{s, value})
+				total += value
+			}
+		}
+		for i := range weights[d] {
+			weights[d][i].weight /= total
+		}
+	}
+	return weights
+}
+
+// Separable convolution covers the complete signed kernel footprint in
+// premultiplied RGBA. Cache only horizontal rows still needed by the next
+// destination row; the reference never allocates a full intermediate image.
+func cubicReference(src image.Image, orient, ow, oh, dw, dh int) func(int, int) [4]float64 {
+	wx, wy := cubicWeights(ow, dw), cubicWeights(oh, dh)
+	rows := make(map[int][][4]float64)
+	current := -1
+	var result [][4]float64
+	return func(x, y int) [4]float64 {
+		if current != y {
+			current = y
+			result = make([][4]float64, dw)
+			for index := range rows {
+				if index < wy[y][0].index {
+					delete(rows, index)
+				}
+			}
+			for _, vertical := range wy[y] {
+				row, found := rows[vertical.index]
+				if !found {
+					row = make([][4]float64, dw)
+					for dx, terms := range wx {
+						for _, horizontal := range terms {
+							pixel := orientedSample(src, orient, horizontal.index, vertical.index)
+							for c := range pixel {
+								row[dx][c] += pixel[c] * horizontal.weight
+							}
+						}
+					}
+					rows[vertical.index] = row
+				}
+				for dx, pixel := range row {
+					for c := range pixel {
+						result[dx][c] += pixel[c] * vertical.weight
+					}
+				}
+			}
+		}
+		pixel := result[x]
+		pixel[3] = math.Max(0, math.Min(65535, pixel[3]))
+		for c := 0; c < 3; c++ {
+			pixel[c] = math.Max(0, math.Min(pixel[3], pixel[c]))
+		}
+		return pixel
+	}
+}
+
+func orientedSample(src image.Image, orient, x, y int) [4]float64 {
+	w, h := src.Bounds().Dx(), src.Bounds().Dy()
+	sx, sy := x, y
+	switch orient {
+	case 2:
+		sx = w - 1 - x
+	case 3:
+		sx, sy = w-1-x, h-1-y
+	case 4:
+		sy = h - 1 - y
+	case 5:
+		sx, sy = y, x
+	case 6:
+		sx, sy = y, h-1-x
+	case 7:
+		sx, sy = w-1-y, h-1-x
+	case 8:
+		sx, sy = w-1-y, x
+	}
+	r, g, b, a := referenceSample(src, sx, sy)
+	return [4]float64{float64(r), float64(g), float64(b), float64(a)}
 }
 
 // Parse the ICC envelope independently of the adapter. A declared profile is
