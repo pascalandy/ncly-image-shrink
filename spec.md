@@ -55,7 +55,6 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | `publication` | Publication exposes only the completed output, keeps input bytes and permissions, and leaves no child process |
 | `alpha` | PNG and WebP retain transparency |
 | `profile` | The complete ICC color profile is retained |
-
 | `pixels` | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing |
 
 ## Case matrix
@@ -73,6 +72,7 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | Private staging | Output: Temporary file | `staging` | `worker-fails` |
 | Descriptive metadata | Output: Keeps private data of the input | `privacy` | `invalid-result` |
 | Orientation and color | Output: Keeps data that a reader needs; Output: Loses data that changes the meaning | `orientation`, `profile`, `png-color`, `alpha`, `depth` | `invalid-result` |
+| Resampling footprints | Output: Complete content under odd/even integer and fractional reductions, all eight orientations, 8/16-bit samples and mixed alpha | `pixels`, `alpha`, `orientation`, `depth` | `invalid-result` |
 | PNG display declarations | Intake: gAMA, cHRM, sRGB and cICP layouts, values, cardinality and conflicts | `png-color`, `privacy` | `input-invalid`, `invalid-result` |
 | Compatible sample models and profiles | Intake: Gray, Gray-alpha at 8/16 bits, RGB and CMYK profiles, orientation and resize | `profile`, `pixels`, `alpha`, `depth` | `input-invalid`, `invalid-result` |
 | PNG transparency representations | Intake: Gray tRNS at 1/2/4/8/16 bits, RGB and palette tRNS, explicit alpha | `alpha`, `pixels`, `profile` | `input-invalid` |
