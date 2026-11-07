@@ -19,7 +19,6 @@ The manifest holds command syntax and result types. Each line below has a spec I
 | `input-invalid` | Missing, empty, unreadable, truncated or malformed input is refused before vips starts, naming the input | `IMAGE_SHRINK_INPUT` |
 | `unsupported` | A format outside JPEG, PNG or WebP, or an extension that disagrees with its bytes, is refused before vips starts | `IMAGE_SHRINK_FORMAT` |
 | `budget` | Compressed input above 64 MiB, over 40 million pixels, or a dimension above 40000 is refused before full decoding | `IMAGE_SHRINK_LIMIT` |
-| `multipart` | Animated PNG or WebP and multipicture JPEG are refused instead of discarding frames | `IMAGE_SHRINK_MULTIPART` |
 | `options` | Invalid size, quality or timeout values are refused | `USAGE_INVALID` |
 | `exists` | Existing output without force is refused before work and kept | `IMAGE_SHRINK_EXISTS` |
 | `output-link` | A symbolic-link output, nonregular output or output hard-linked to the input is refused, with or without force | `IMAGE_SHRINK_OUTPUT` |
@@ -42,15 +41,11 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | `not-smaller` | An optimized image whose candidate is not strictly smaller is refused with no new output, keeping an old one |
 | `format` | JPEG, PNG and static WebP output keep the input format |
 | `smaller` | The published copy has strictly fewer bytes than the input |
-| `pixels` | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing |
 | `geometry` | The longest side fits the chosen bound, defaults to 2048, retains aspect ratio within pixel rounding, and never enlarges |
-| `quality` | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding |
 | `orientation` | All eight EXIF orientations are applied to the pixels before orientation metadata is removed |
-| `profile` | The complete ICC color profile is retained |
 | `png-color` | PNG gamma, chromaticity and sRGB declarations retain their display meaning |
 | `alpha` | PNG and WebP retain transparency |
 | `depth` | PNG retains its 16-bit sample precision |
-| `privacy` | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata |
 | `names` | Paths with spaces, leading dashes, shell characters or loader-option characters are data, and output stays beside the input |
 | `preview` | Dry run changes no file, shares input and conflict checks, reports output and overwrite, and marks compression and the publication operation pending |
 | `staging` | Private exclusive staging cannot follow a planted temporary symlink and is removed on success, failure and signals |
@@ -88,4 +83,12 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 
 ## Open lines
 
-None. The matrix covers the applicable generic cases, including the output privacy and publication cases.
+The first review pair found missing behavior or insufficient proof for these existing promises. Their findings retain the same spec IDs while the next round supplies complete family tests and repairs.
+
+| ID | Command | Part | Case | Code |
+|---|---|---|---|---|
+| `multipart` | `ncly image shrink` | Failures | Animated PNG or WebP and multipicture JPEG are refused instead of discarding frames | `IMAGE_SHRINK_MULTIPART` |
+| `pixels` | `ncly image shrink` | Acceptance | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing | - |
+| `quality` | `ncly image shrink` | Acceptance | JPEG and WebP use the selected lossy quality, default 80, while PNG uses lossless encoding | - |
+| `profile` | `ncly image shrink` | Acceptance | The complete ICC color profile is retained | - |
+| `privacy` | `ncly image shrink` | Acceptance | Location, author, camera and capture date in EXIF, XMP, IPTC and comments are removed. The output retains only color and pixel-decoding metadata | - |
