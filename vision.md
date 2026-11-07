@@ -1,0 +1,34 @@
+# image-shrink vision
+
+This file is a form filled for the example command, `ncly image shrink`.
+It inspects a file until you replace it.
+Replace the text of each part, then delete each line that starts with "Fill:".
+
+Fill: one sentence that states the job of the extension, and for whom.
+
+`ncly image shrink` gives the size and the line count of a file, so an agent knows what it will read. The extension meets "What a great extension does", in the contract that `just contract` prints.
+
+## Wraps
+
+Fill: the source and the revision of each program or script that a command wraps, such as a Git URL and a commit.
+
+- `worker/inspect.py`, which the extension template wrote
+
+## Intake
+
+`just records` writes this part from `intake.toml`. Change that file, then run `just records` again.
+
+- Effects: `worker/inspect.py` reads the file once, in chunks of 64 KiB, and writes nothing. Source: `worker/inspect.py` of the template, at the Nicely version that `go.mod` pins. Read: the function `main`
+- Exit codes: 0 with one JSON object on stdout, and 2 for a wrong argument count. Source: `worker/inspect.py` of the template, at the Nicely version that `go.mod` pins. Read: `main` and the last two lines of the file
+- Resource use: memory stays near one chunk, whatever the size of the file. Source: `worker/inspect.py` of the template, at the Nicely version that `go.mod` pins. Read: the loop of `main`
+- Known failures: Python raises an error and exits 1 on a file that it cannot open. Source: `worker/inspect.py` of the template, at the Nicely version that `go.mod` pins. Read: the call to `open` in `main`, which nothing catches
+
+**Experiments.**
+
+- `python3 worker/inspect.py notes.md`: on a file of three lines, the last without a newline, it printed `"lines": 3` and exited 0
+
+## Refuses
+
+Fill: what the extension will not do, and why.
+
+- It never changes a file: it only reads

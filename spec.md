@@ -1,0 +1,100 @@
+# image-shrink spec
+
+`manifest.toml` holds the machine facts of each command, and `ncly describe image shrink --json` shows them. This file holds only what the manifest cannot say, so it never repeats a flag or a type.
+
+Each line of Failures and Acceptance has the state `proven`: a test claims it, and the test kit requires that claim.
+A line that no test proves yet has the state `open`, and waits under `## Open lines`.
+A line that the user accepted as a limit has the state `limit`, in a table under **Limits.** of its command.
+`just finish` fails while a line is open, or while a limit has no record of the user's acceptance.
+
+This file is a form filled for the example command, `ncly image shrink`.
+It inspects a file until you replace it.
+Give each command a section like that one, then delete each line that starts with "Fill:".
+
+Fill: for each command, what proves its success, why each declared effect exists, and each failure with its code.
+
+Fill: start each line of Failures and of Acceptance with its own spec ID, such as `bad-input`. Then claim each ID with a line `# spec: <id>` in the test that proves it. `test-kit.md` in the folder that `just contract` prints defines both.
+
+Fill: write every line of a command in its first pull request, from the generic cases of the contract and the cases of the program. The skill in `.agents/skills/nicely-extension/` says how.
+
+Fill: the failure of an input that exists but that the wrapped program cannot read, with a `IMAGE_SHRINK_` code and exit 2. A dry run, when the command has one, gives the same failure.
+
+Fill: each limit that the user accepted, as a row of a table under **Limits.**, with the columns ID, State, Limit, and Accepted. A limit never contradicts a line of Failures or of Acceptance.
+
+## ncly image shrink
+
+**Success means** that the answer holds `size_bytes` and `lines`, which `worker/inspect.py` counted in one read of the file.
+
+**Effects.** None: the command reads the file, and writes, bills, and calls nothing.
+The dry run makes the same free inspection and gives the same result.
+
+**Failures.**
+
+| ID | Condition | Code |
+|---|---|---|
+| `bad-input` | The file is missing or is no regular file, or `--timeout` is no duration | `USAGE_INVALID` |
+| `no-python` | `python3` is missing or older than 3.9, or its version probe fails or does not finish within 10 s | `PREREQ_MISSING` |
+| `worker-fails` | `python3` exits with a code other than 0, its output is missing, malformed, or over 1 MB, or the timeout expires, even during the probe | `RUNTIME` |
+| `interrupted` | Ctrl-C arrives | `INTERRUPTED` |
+| `terminated` | SIGTERM arrives | `TERMINATED` |
+
+**Limits.** None.
+
+## Acceptance
+
+The real input is a short Markdown file. Without a fixture, `acceptance.sh` makes one. The answer keeps these properties of the input:
+
+- `size`: `size_bytes` is the size that `wc -c` gives
+- `lines`: `lines` is the line count that `awk` gives, where a last line without a newline counts too
+
+| ID | Input that `python3` accepts | Code |
+|---|---|---|
+| `not-text` | A file that holds a NUL byte, such as an image, whose lines mean nothing | `IMAGE_SHRINK_NOT_TEXT` |
+
+Fill: the real input that proves the command, such as a fixture of the registry of Nicely, and the properties that the output keeps. `acceptance.sh` checks each property.
+
+Fill: each input that the wrapped program accepts but that the domain refuses, with its code. A scenario and `acceptance.sh` refuse each one.
+
+## Case matrix
+
+Before the review of round 1, this table lists each family of cases of each command, with the spec IDs of its tests (#423).
+A family comes from a generic case that applies, or from a family that the intake found.
+An example of such a family is each way that the input declares how to read it.
+Accepted names the lines whose tests give an input that passes. Refused names the lines whose tests refuse an input, or `None`.
+An accepted privacy limit names its ID in Accepted for every applicable Output case.
+The Limit cell declares the same `Output: <case>` bindings, separated from its description by semicolons.
+Bindings can come before or after the description. Its own ID or bindings alone do not describe retained data.
+A semicolon-separated part that equals `None` or starts with `Fill:` prevents acceptance. These comparisons ignore case.
+Its acceptance case uses `reads -case '<case>' -limit <id>` and independently checks the retained metadata and nondefault display declaration.
+Each refusal and each branch that classifies an input has a pair: a test that passes, and a test that refuses.
+Each line of Failures and of Acceptance is in a family. `just finish` fails when a family has no test.
+A repair of a finding adds a pair of tests for its whole family, not only a test of the reported example.
+
+| Family | Source | Accepted | Refused |
+|---|---|---|---|
+| The input is a regular file that exists | Input: Unreadable | `size`, `lines` | `bad-input` |
+| The input holds text | Input: Of the wrong type | `lines` | `not-text` |
+| `python3` runs the worker | Other: Missing program, and the intake | `size` | `no-python`, `worker-fails` |
+| A signal stops the run | Interruption | `size` | `interrupted`, `terminated` |
+
+Fill: one row for each family of cases of your commands, in place of the rows of `inspect`.
+
+## Publication
+
+This part declares each command that creates or replaces a user file, as `publication.md` in the folder that `just contract` prints defines.
+`just check` fails when a command whose effects set `user_writes` has no row.
+It also fails when no scenario proves an obligation of a row, and no reason covers it.
+
+None: `ncly image shrink` creates or replaces no user file.
+
+Fill: for a command that publishes a file, a table with the columns Command, Mode, Destination, Overwrite, Protected, Operation, and Dry run. Give each mode one row.
+
+Fill: a second table with the columns Command, Mode, Obligation, and Reason, for each obligation that no scenario proves.
+
+## Open lines
+
+A round of the skill in `.agents/skills/nicely-extension/` moves an open line into Failures or Acceptance, with the scenario that claims it.
+
+None.
+
+Fill: each line that no test proves yet, in a table with the columns ID, Command, Part, Case, and Code. Each finding that `review.toml` records as `open` names the ID of its row, so `spec.md` and the ledger agree. The test kit does not read this part.

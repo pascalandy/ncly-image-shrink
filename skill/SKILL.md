@@ -1,0 +1,15 @@
+---
+name: image-shrink
+description: Use when an agent needs the size or the line count of a file before it reads the file or sends it on.
+---
+
+# image-shrink
+
+Use `ncly image shrink` to learn the size and the line count of one file. It only reads the file.
+
+- Give a path in your folder: the command reads it there
+- Read `size_bytes` and `lines` from the answer of `--json`
+- Inspect each file of a folder in its own call
+- On `PREREQ_MISSING`, relay `hint` to the human, who installs Python 3.9 or later
+- On `IMAGE_SHRINK_NOT_TEXT`, the file is no text, such as an image: do not count its lines
+- With `--json`, a command failure leaves stdout empty. Read the error object from the last line of stderr

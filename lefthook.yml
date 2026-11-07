@@ -1,0 +1,7 @@
+# Run lefthook install once per clone. Before each push, Lefthook runs just
+# check, the checks of this repository. A push can skip this hook, so
+# .github/workflows/check.yml runs just check again on GitHub.
+pre-push:
+  commands:
+    check:
+      run: just check

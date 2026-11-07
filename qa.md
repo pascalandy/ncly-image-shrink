@@ -1,0 +1,65 @@
+# image-shrink QA
+
+This file answers one question: what does the UAT of `ncly image shrink` add to the [UAT protocol](https://github.com/pascalandy/nicely/blob/v0.27.0/docs/qa/protocol.md) of Nicely? [spec.md](spec.md) holds the behavior.
+
+This file is a form filled for the example command, `ncly image shrink`.
+Fill in each section for your commands, then delete each line that starts with "Fill:".
+
+## Prerequisites
+
+- `just acceptance` passes on the fixture that [spec.md](spec.md#acceptance) names in `## Acceptance`, in a clone at the tested tag
+- `python3` 3.9 or later, which the example command runs
+- `wc`, for the independent check
+
+Fill: each program that the extension wraps, at the version that `vision.md` names as tested, and each tool of the independent check.
+
+## Prompt for the fresh agent
+
+"Use Nicely to count the lines of `<run>/notes.md`"
+
+Fill: one sentence that a user would say, without a command, a flag, or a hint.
+
+## Criteria
+
+| Family | Criterion | Covered by |
+|---|---|---|
+| Result | `wc -c` gives the `size_bytes` of the answer | `just acceptance` |
+| Fidelity | The answer keeps the properties that [spec.md](spec.md#acceptance) names in `## Acceptance` | `just acceptance`, which claims the spec ID of each property |
+| Determinism | Runs on one host give the same answer | `just acceptance`, which runs the command twice |
+| Errors | The failures and refusals of [spec.md](spec.md) | [Error scenarios](#error-cases), through `just check` |
+| Uninstall | The installed extension no longer appears in describe | The release receipt |
+
+Fill: for each family, what a tool other than the extension measures on the output.
+
+Fill: in Covered by, the test that proves the criterion. When no test can, write `Manual:` and the reason, such as a screen that only a human sees.
+
+## Error cases
+
+The scenarios own error stimuli and expected answers:
+
+- [inspect.txtar](testdata/script/inspect.txtar) covers command failures and signals
+- [refusal.txtar](testdata/script/refusal.txtar) covers the refusal from `## Acceptance`
+
+Fill: replace these links with the scenarios of your commands.
+
+## Human items
+
+- The human gives the verdict, records reservations, and closes the UAT
+- The human decides the domain's accepted inputs, names, and limits
+- The human checks perception on a real screen when the changed behavior needs that check
+- The human handles permission prompts, secrets, grants, and fixture locks
+- The human sets Economy budgets; the release receipt holds the measurements
+
+Fill: name each screen or permission prompt that this extension needs.
+
+## Known limits
+
+[spec.md](spec.md) holds each accepted limit. A limit never contradicts a line of Failures or of Acceptance.
+
+Fill: each defect that a UAT found and that is still open, with its issue.
+
+## Gotchas
+
+- Scratch XDG folders break a `just` that mise installed, because its shim then reads the config, state, and installs of mise there. Run `mise which just` before you move them, and call that path. `just acceptance` finds each program first.
+
+Fill: each surprise that the next tester must know, such as the time of one run on the test host.

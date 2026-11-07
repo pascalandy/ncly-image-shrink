@@ -1,0 +1,113 @@
+# AGENTS.md
+
+`ncly-image-shrink` adds commands at `ncly image shrink` and beneath it.
+The domain names a family of work, such as `video`.
+An optional name identifies one job, such as `convert`.
+Neither names the wrapped tool.
+Read `extension-identity.md` in the pinned contract for the slug and command ownership.
+
+## Read, in this order
+
+1. `vision.md`: the job of the extension, what it wraps, and what it refuses
+2. `spec.md`, including `## Acceptance`: each command's success criteria, effects, and failures
+3. `qa.md`: how a user accepts the extension, with the UAT protocol of Nicely
+4. `manifest.toml`: the machine facts of each command, which `ncly describe image shrink --json` shows once the extension is installed
+5. The contract, at the Nicely version that `go.mod` pins. `just contract` prints its folder. Start with "What a great extension does" in its `extensions.md`, and open only the parts that it links
+
+## Change a command
+
+Build each command with the skill in `.agents/skills/nicely-extension/`, from the first command.
+Its rounds give the order of the work, from the intake to "Done when".
+Write the handler body on `sdk/wrap` for one program, or on `sdk/runner` for more.
+Declare the command in the manifest and the catalog, so `extension.Check` passes.
+Teach when to use the command in `skill/SKILL.md`.
+
+Give each command one bounded job beneath the extension root.
+Never relay arbitrary arguments to a wrapped program.
+The skill teaches when to use the command, rather than its implementation.
+For a command with a dry run, tell the agent to dry-run the call first.
+
+Judge the primary output with a reader that is not the wrapped program. Do it in each acceptance case of `testdata/script/`, and in `acceptance.sh` on the real input.
+A check that reads only a header or the file type is not sufficient.
+Compare the content that this reader gives with an independent reference.
+Use the real input and criteria of `## Acceptance`.
+For a paid command, run only its dry run.
+
+A wrapped script goes in `worker/`.
+
+`sdk/wrap` keeps 1 MB of stdout, and answers `RUNTIME` once a program writes more. A program that prints its progress on stdout, such as an encoder, can pass that limit in a long run. When the decoder reads no stdout, set `DiscardStdout: true` in `wrap.Program`. When it reads stdout, set an `OutputLimit` that the longest run cannot pass. Prove it with a scenario whose stub prints more than 1 MB on stdout, then exits 0.
+
+## Rule index
+
+`AGENTS/rule-index.md` and its parts in `AGENTS/rule-index/` name the check that enforces each rule of this file. `just check` prints how many rules wait for a check.
+
+## Remove the example
+
+Keep the named extension's root. After these steps, follow "Change a command" for `ncly image shrink`.
+
+1. Delete `inspect.go`, `worker/inspect.py`, and `testdata/script/inspect.txtar`. Rewrite `testdata/script/refusal.txtar` for a refusal of your command, or delete it when the command has none. Rewrite `testdata/script/acceptance.txtar` for a property of your command
+2. Replace the example declaration at `image shrink` and its examples in `manifest.toml`. Remove the `[[errors]]` entry of `IMAGE_SHRINK_NOT_TEXT`, and `[programs.python3]` when no command needs it
+3. Replace the `image-shrink.inspect` catalog entries for the new command. Keep every catalog ID under `image-shrink.`
+4. Remove the `ncly image shrink` section and the introduction line that names the example from `spec.md`. Remove its mentions from `vision.md`, `qa.md`, `skill/SKILL.md`, and the Recipes of `AGENTS.md`. Replace it in `acceptance.sh`
+5. Remove its handler entry from `extension.go`. When `worker/` is empty, also remove `//go:embed worker`, its variable, and `Resources`. Then run `gofmt -w .`
+
+## Recipes
+
+The recipes need Go, `just`, and `uv`, which runs the pinned Copier of `just update`. The scenarios of `inspect` run `/usr/bin/python3`, 3.9 or later.
+Signoff also needs Git and `gh` with the `gh-signoff` extension.
+
+After Copier creates the repository, run `go mod tidy` once, which writes `go.sum` for the recipes. Then commit the repository with Git, since `just update` needs a clean Git tree. Run `lefthook install` once per clone, so `just check` runs before each push. GitHub runs it again for each push to `main` and each pull request.
+
+- `just check`: every check. It runs `go mod tidy -diff`, `gofmt`, `go vet`, the analyzers of the pinned SDK, and `go test`, whose test kit installs the extension into scratch folders. With `verification/tlc.json`, it first reads the record of its TLA+ models
+- `just finish`: the exit of the loop. `finish-gate.md` in the pinned contract lists what it checks
+- `just records`: writes `## Intake` of `vision.md` from `intake.toml`, and `readiness.md` from `review.toml`, as `build-records.md` in the pinned contract says
+- `just verify-models [jar]`: optional. It checks the TLA+ models of `verification/tlc.json` with the pinned TLC and the Java of mise, then writes the record that `just check` reads. `formal-models.md` in the pinned contract says how
+- `just scenario <name>`: runs the scenario `testdata/script/<name>.txtar`, such as the first scenario of round 1 at its commit
+- `just signoff`: runs `just finish` and `just check` on the committed SHA in a detached scratch worktree. It also runs the first failing run of `review.toml` again, at its commit. Then it writes a receipt outside the repository, and signs that exact SHA
+- `just install`: installs the extension into Nicely's extensions folder, in place of its previous install
+- `just uninstall`: removes that install, and keeps its keys and grants
+- `just acceptance [fixture]`: runs `acceptance.sh`, which runs the command of `## Acceptance` as an agent would. It runs in an owned run of the SDK, without the Nicely settings of the caller, such as `NCLY_CONFIG`. It works on a copy of the fixture, or on an input that it makes
+- `just update <version>`: runs the target version's updater on a clean Git tree, with the template before the SDK
+- `just contract`: prints the folder of the contract at the Nicely version that `go.mod` pins
+
+### Update an older repository
+
+For a repository whose update recipe holds a script, run the target updater directly.
+Replace VERSION with the target Nicely tag, such as `v0.24.0`:
+
+```sh
+go -C "$(go mod download -json github.com/pascalandy/nicely@VERSION | sed -n 's/^[[:space:]]*"Dir": "\(.*\)",$/\1/p')" run ./sdk/extensionrepo/cmd/extensionrepo update VERSION "$PWD"
+```
+
+The updater keeps your dependencies and reconciles Nicely's replacements in `go.mod`.
+On a Copier conflict, resolve each file and mark it with `git add`.
+Remove each `.rej` file, then run the printed bootstrap command with `--continue`.
+This finishes dependency updates and runs `just check`.
+`update-an-extension.md` of the contract holds the recovery rules.
+After an update from a template before `just finish`, start the first build after the update commit, as the skill says.
+
+## Done when
+
+The rounds of the skill stop when all of these hold:
+
+- `just finish` passes
+- `just check` and `just acceptance` pass, and the hosted checks pass
+
+A build has at most 5 rounds, and `just finish` fails after 5.
+At that limit, stop, and report each open line and each open finding to the user, as the skill says.
+An answer that lets you choose, such as "decide yourself", accepts no limit and starts no round.
+For a command that needs a key, relay the grant hint to the human and wait.
+A delivery skill or a merge gate, such as a "full stop" or "full send" request, runs after "Done when" holds.
+It never replaces "Done when". `just signoff` runs `just finish` first, so a merge or a release waits until `just finish` passes. When the previous pull request is not merged, a new pull request stacks on its branch.
+
+## Release
+
+1. Commit every change
+2. Push that commit to a review branch
+3. Run `just signoff` for that pushed commit
+4. Make sure that "Done when" holds for this commit
+5. Merge that exact signed SHA into the default branch
+6. Run `just release vX.Y.Z`, with an optional fixture path. It runs `just finish` again on that commit, then `just acceptance`, before it makes the tag
+7. Read the printed receipt for acceptance, the published install, Economy reservations, hosted checks, and uninstall
+
+For release recovery, read "Release and install" in the pinned contract's `extensions.md`.

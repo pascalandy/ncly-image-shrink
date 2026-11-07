@@ -1,0 +1,43 @@
+format_version = 1
+contract_version = 1
+domain = "image"
+name = "shrink"
+
+[[commands]]
+path = "image shrink"
+summary = "image-shrink.inspect.summary"
+examples = ["ncly image shrink notes.md", "ncly image shrink notes.md --json"]
+effects = {}
+modes = { dry_run = true }
+requires = { bins = ["python3"] }
+
+[[commands.args]]
+name = "file"
+summary = "image-shrink.inspect.file"
+required = true
+
+[[commands.flags]]
+name = "timeout"
+value = "duration"
+default = "30s"
+summary = "image-shrink.inspect.timeout"
+
+[commands.result.schema]
+type = "object"
+required = ["size_bytes", "lines"]
+properties = { size_bytes = { type = "integer", minimum = 0 }, lines = { type = "integer", minimum = 0 } }
+
+[commands.result.dry_run_schema]
+type = "object"
+required = ["size_bytes", "lines"]
+properties = { size_bytes = { type = "integer", minimum = 0 }, lines = { type = "integer", minimum = 0 } }
+
+[[errors]]
+code = "IMAGE_SHRINK_NOT_TEXT"
+exit = 2
+commands = ["image shrink"]
+modes = ["run"]
+
+[programs.python3]
+version = "3.9"
+install = { brew = ["brew", "install", "python"], pacman = ["sudo", "pacman", "-S", "python"], apt = ["sudo", "apt", "install", "python3"], dnf = ["sudo", "dnf", "install", "python3"] }
