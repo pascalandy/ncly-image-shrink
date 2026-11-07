@@ -17,6 +17,13 @@ exec bin/imageproof clean
 # spec: pixels
 exec bin/imageproof bad-pixels photo.shrunk.png bad-fidelity.png
 reads photo.shrunk.png reference bad-fidelity.png bin/imageproof match photo.png '{}' 64
+# Display/profile controls have correct pixels and no private block.
+# spec: pixels profile png-color invalid-result
+exec bin/imageproof corrupt-display photo.shrunk.png bad-profile-output.png profile
+reads photo.shrunk.png reference bad-profile-output.png bin/imageproof match photo.png '{}'
+exec bin/imageproof corrupt-display photo.shrunk.png bad-gamma-output.png gamma
+reads photo.shrunk.png reference bad-gamma-output.png bin/imageproof match photo.png '{}'
+
 
 # The exact manifest example proves real byte saving and removal of its XMP.
 # spec: pixels format smaller privacy profile alpha
@@ -64,6 +71,12 @@ protect conflict-chroma.png conflict-chroma.shrunk.png
 refuses IMAGE_SHRINK_INPUT ncly image shrink conflict-chroma.png
 ! exec bin/imageproof fixture valid-gAMA.png leaking-output.png
 stderr 'invalid PNG display declaration'
+# EXIF is allowed after IDAT, but repeated orientation declarations are not.
+exec bin/imageproof exif-placement
+ncly image shrink exif-after-pixels.png --json
+exec bin/imageproof match exif-after-pixels.png exif-after-pixels.shrunk.png
+protect exif-duplicate.png exif-duplicate.shrunk.png
+refuses IMAGE_SHRINK_INPUT ncly image shrink exif-duplicate.png
 
 # R1-F2: preserve Gray, Gray-alpha and CMYK sample models and profiles.
 # spec: profile orientation pixels alpha depth
@@ -143,6 +156,46 @@ exec bin/imageproof bad-model bad-profile-tag.jpg tag
 protect bad-profile-tag.jpg bad-profile-tag.shrunk.jpg
 refuses IMAGE_SHRINK_INPUT ncly image shrink bad-profile-tag.jpg
 
+# spec: profile pixels orientation
+exec bin/imageproof gray-jpeg
+ncly image shrink gray.jpg --max-side 32 --json
+exec bin/imageproof match gray.jpg gray.shrunk.jpg 32
+
+# All retained JPEG display declaration shapes have accepted/refused pairs.
+# spec: input-invalid profile pixels privacy
+exec vips copy orientation-1.jpg 'rgb444.jpg[Q=100,subsample_mode=off,keep=icc]'
+exec bin/imageproof jpeg-declarations
+ncly image shrink adobe-rgb-0.jpg --json
+exec bin/imageproof match adobe-rgb-0.jpg adobe-rgb-0.shrunk.jpg
+ncly image shrink adobe-rgb-1.jpg --json
+exec bin/imageproof match adobe-rgb-1.jpg adobe-rgb-1.shrunk.jpg
+protect adobe-rgb-length.jpg adobe-rgb-length.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink adobe-rgb-length.jpg
+protect adobe-rgb-duplicate.jpg adobe-rgb-duplicate.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink adobe-rgb-duplicate.jpg
+protect adobe-rgb-value.jpg adobe-rgb-value.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink adobe-rgb-value.jpg
+protect adobe-rgb-conflict.jpg adobe-rgb-conflict.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink adobe-rgb-conflict.jpg
+ncly image shrink adobe-cmyk-0.jpg --json
+exec bin/imageproof match adobe-cmyk-0.jpg adobe-cmyk-0.shrunk.jpg
+ncly image shrink adobe-cmyk-2.jpg --json
+exec bin/imageproof match adobe-cmyk-2.jpg adobe-cmyk-2.shrunk.jpg
+protect adobe-cmyk-length.jpg adobe-cmyk-length.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink adobe-cmyk-length.jpg
+protect adobe-cmyk-duplicate.jpg adobe-cmyk-duplicate.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink adobe-cmyk-duplicate.jpg
+protect adobe-cmyk-value.jpg adobe-cmyk-value.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink adobe-cmyk-value.jpg
+protect adobe-cmyk-conflict.jpg adobe-cmyk-conflict.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink adobe-cmyk-conflict.jpg
+ncly image shrink jfif-valid.jpg --json
+exec bin/imageproof match jfif-valid.jpg jfif-valid.shrunk.jpg
+protect jfif-length.jpg jfif-length.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink jfif-length.jpg
+protect jfif-value.jpg jfif-value.shrunk.jpg
+refuses IMAGE_SHRINK_INPUT ncly image shrink jfif-value.jpg
+
 # spec: exists
 protect photo.png photo.shrunk.png
 refuses IMAGE_SHRINK_EXISTS ncly image shrink photo.png
@@ -211,6 +264,25 @@ exec bin/imageproof private-webp photo.webp
 # spec: alpha format quality pixels profile
 ncly image shrink photo.webp --json
 reads photo.shrunk.webp reference photo.webp bin/imageproof match photo.webp '{}'
+
+# spec: orientation profile alpha pixels
+exec bin/imageproof webp-orientations
+ncly image shrink webp-orientation-1.webp --json
+exec bin/imageproof match webp-orientation-1.webp webp-orientation-1.shrunk.webp
+ncly image shrink webp-orientation-2.webp --json
+exec bin/imageproof match webp-orientation-2.webp webp-orientation-2.shrunk.webp
+ncly image shrink webp-orientation-3.webp --json
+exec bin/imageproof match webp-orientation-3.webp webp-orientation-3.shrunk.webp
+ncly image shrink webp-orientation-4.webp --json
+exec bin/imageproof match webp-orientation-4.webp webp-orientation-4.shrunk.webp
+ncly image shrink webp-orientation-5.webp --json
+exec bin/imageproof match webp-orientation-5.webp webp-orientation-5.shrunk.webp
+ncly image shrink webp-orientation-6.webp --json
+exec bin/imageproof match webp-orientation-6.webp webp-orientation-6.shrunk.webp
+ncly image shrink webp-orientation-7.webp --json
+exec bin/imageproof match webp-orientation-7.webp webp-orientation-7.shrunk.webp
+ncly image shrink webp-orientation-8.webp --json
+exec bin/imageproof match webp-orientation-8.webp webp-orientation-8.shrunk.webp
 
 # R1-F4: genuine multi-image files and every multipart classifier.
 # spec: multipart format
@@ -383,8 +455,57 @@ exec bin/imageproof clean
 rm marker
 rm photo.shrunk.png
 
+# R1-F6: the independent observer marks only a complete new destination.
+# The ordinary scratch load makes cleanup observable, without a handler hook.
+# spec: publication interrupted terminated staging
+env STUB=slow-cleanup
+protect photo.png
+exec bin/imageproof published photo.png photo.shrunk.png marker &
+survives photo.shrunk.png
+signal INT marker ncly image shrink photo.png
+stderr '"code":"INTERRUPTED"'
+stderr '"output":.*photo[.]shrunk[.]png'
+wait
+exec bin/imageproof match photo.png photo.shrunk.png
+exec bin/imageproof mode photo.shrunk.png 600
+exec bin/imageproof clean
+rm marker
+rm photo.shrunk.png
+cp photo.png photo.shrunk.png
+chmod 640 photo.shrunk.png
+protect photo.png
+exec bin/imageproof published photo.png photo.shrunk.png marker &
+survives photo.shrunk.png
+signal TERM marker ncly image shrink photo.png --force
+stderr '"code":"TERMINATED"'
+stderr '"output":.*photo[.]shrunk[.]png'
+wait
+exec bin/imageproof match photo.png photo.shrunk.png
+exec bin/imageproof mode photo.shrunk.png 640
+exec bin/imageproof clean
+rm marker
+rm photo.shrunk.png
+# A real cleanup error after link retains the complete copy and reports it.
+# spec: publication publish-fails
+env STUB=cleanup-fails
+protect photo.png
+keeps 1 ncly image shrink photo.png
+stderr '"code":"IMAGE_SHRINK_PUBLISH"'
+stderr '"output":.*photo[.]shrunk[.]png'
+exec bin/imageproof match photo.png photo.shrunk.png
+exec bin/imageproof repair-stage stage-path
+exec bin/imageproof clean
+rm photo.shrunk.png
+env STUB=
+
 # spec: invalid-result
 env STUB=invalid
+protect photo.png photo.shrunk.png
+keeps 1 ncly image shrink photo.png
+stderr '"code":"IMAGE_SHRINK_RESULT"'
+
+# spec: invalid-result profile privacy
+env STUB=lost-profile
 protect photo.png photo.shrunk.png
 keeps 1 ncly image shrink photo.png
 stderr '"code":"IMAGE_SHRINK_RESULT"'
@@ -449,10 +570,26 @@ case "$1:$STUB" in
 --version:old) echo vips-1.0.0; exit 0 ;;
 --version:*) exec "$real" --version ;;
 esac
-# Copy is only fixture generation, outside a command under test.
+# Generation and command calls use the same real encoder unless a case stubs it.
 
 target=${3%%\[*}
 case "$STUB" in
+lost-profile)
+  "$real" "$@" || exit $?
+  "$WORK/bin/imageproof" corrupt-display "$target" "$target" profile
+  exit $?
+  ;;
+slow-cleanup)
+  "$real" "$@" || exit $?
+  "$WORK/bin/imageproof" cleanup-load "$target"
+  exit $?
+  ;;
+cleanup-fails)
+  "$real" "$@" || exit $?
+  printf '%s' "${target%/*}" > "$WORK/stage-path"
+  chmod 500 "${target%/*}"
+  exit 0
+  ;;
 fail) exit 75 ;;
 noisy) yes progress | head -c 2000000 ;;
 hold)
@@ -494,6 +631,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const private = "Ana Lima, Montreal 45.5019 -73.5674, Camera X, 2026:01:02 03:04:05"
@@ -675,22 +813,57 @@ func metadataOf(b []byte, format string) ([]byte, bool) {
 			pos += n + 12
 		}
 	case "jpeg":
-		for pos := 2; pos+4 <= len(b) && b[pos] == 255; {
+		adobe := false
+		for pos := 2; pos+2 <= len(b); {
+			if b[pos] != 255 {
+				panic("bad JPEG metadata framing")
+			}
+			for pos+1 < len(b) && b[pos+1] == 255 {
+				pos++
+			}
 			marker := b[pos+1]
-			if marker == 0xda {
+			if marker == 0xd9 {
 				break
 			}
+			if pos+4 > len(b) {
+				panic("bad JPEG metadata framing")
+			}
 			n := int(binary.BigEndian.Uint16(b[pos+2:]))
-			if n < 2 || pos+2+n > len(b) {
-				panic("bad JPEG")
+			if n < 2 || n > len(b)-pos-2 {
+				panic("bad JPEG metadata framing")
 			}
 			data := b[pos+4 : pos+2+n]
 			if marker == 0xe2 && bytes.HasPrefix(data, []byte("ICC_PROFILE\x00")) {
+				if len(data) < 14 {
+					panic("bad ICC segment")
+				}
 				profile = append(profile, data[14:]...)
-			} else if marker == 0xe1 || marker == 0xed || marker == 0xfe {
+			} else if marker == 0xee && bytes.HasPrefix(data, []byte("Adobe")) {
+				if adobe || len(data) != 12 || data[11] > 2 {
+					panic("invalid Adobe display declaration")
+				}
+				adobe = true
+			} else if marker == 0xe0 && bytes.HasPrefix(data, []byte("JFIF\x00")) {
+				if len(data) < 14 || data[5] != 1 || data[6] > 2 || data[7] > 2 || len(data) != 14+3*int(data[12])*int(data[13]) {
+					panic("invalid JFIF display declaration")
+				}
+			} else if marker >= 0xe0 && marker <= 0xef || marker == 0xfe {
 				sensitive = true
 			}
 			pos += n + 2
+			if marker == 0xda {
+				for pos+1 < len(b) {
+					if b[pos] != 255 {
+						pos++
+						continue
+					}
+					if b[pos+1] == 0 || b[pos+1] >= 0xd0 && b[pos+1] <= 0xd7 {
+						pos += 2
+						continue
+					}
+					break
+				}
+			}
 		}
 	case "webp":
 		for pos := 12; pos+8 <= len(b); {
@@ -763,6 +936,12 @@ func main() {
 			binary.BigEndian.PutUint32(profile[136:], uint32(len(profile)+16))
 		}
 		attachProfile(name, profile, 1)
+	case "cleanup-load":
+		cleanupLoad(os.Args[2])
+	case "published":
+		published(os.Args[2], os.Args[3], os.Args[4])
+	case "repair-stage":
+		repairStage(os.Args[2])
 	case "multipart-fixtures":
 		multipartFixtures()
 	case "quality-fixture":
@@ -776,18 +955,79 @@ func main() {
 		seg = binary.BigEndian.AppendUint16(seg, uint16(len(d)+2))
 		seg = append(seg, d...)
 		write(os.Args[2], append(append(append([]byte{}, b[:2]...), seg...), b[2:]...))
+	case "jpeg-declarations":
+		jpegDeclarationsFixtures()
+	case "corrupt-display":
+		corruptDisplay(os.Args[2], os.Args[3], os.Args[4])
+	case "webp-orientations":
+		b := read("photo.webp")
+		for n := 1; n <= 8; n++ {
+			d := exif(uint16(n))
+			c := append([]byte("EXIF"), 0, 0, 0, 0)
+			binary.LittleEndian.PutUint32(c[4:], uint32(len(d)))
+			c = append(c, d...)
+			if len(d)%2 != 0 {
+				c = append(c, 0)
+			}
+			out := append(bytes.Clone(b), c...)
+			out[20] |= 8
+			binary.LittleEndian.PutUint32(out[4:], uint32(len(out)-8))
+			write(fmt.Sprintf("webp-orientation-%d.webp", n), out)
+		}
+	case "gray-jpeg":
+		img := image.NewGray(image.Rect(0, 0, 64, 32))
+		for y := 0; y < 32; y++ {
+			for x := 0; x < 64; x++ {
+				v := byte(35)
+				if x >= 32 {
+					v = 206
+				}
+				img.SetGray(x, y, color.Gray{Y: v})
+			}
+		}
+		var out bytes.Buffer
+		must(jpeg.Encode(&out, img, &jpeg.Options{Quality: 100}))
+		write("gray.jpg", out.Bytes())
+		attachModel("gray.jpg", "GRAY", 2)
 	case "model-fixtures":
 		modelFixtures()
 	case "attach-model":
 		n, e := strconv.Atoi(os.Args[4])
 		must(e)
 		attachModel(os.Args[2], os.Args[3], n)
+	case "exif-placement":
+		b := read("photo.png")
+		var out bytes.Buffer
+		out.Write(b[:8])
+		var exifBlock []byte
+		for p := 8; p < len(b); {
+			n := int(binary.BigEndian.Uint32(b[p:]))
+			k := string(b[p+4 : p+8])
+			if k == "eXIf" {
+				exifBlock = bytes.Clone(b[p : p+n+12])
+			}
+			if k == "IEND" {
+				out.Write(exifBlock)
+			}
+			if k != "eXIf" {
+				out.Write(b[p : p+n+12])
+			}
+			p += n + 12
+		}
+		write("exif-after-pixels.png", out.Bytes())
+		write("exif-duplicate.png", append(append(append([]byte{}, b[:33]...), exifBlock...), b[33:]...))
 	case "declarations":
 		makeDeclarations()
 	case "bad-pixels":
 		badPixels(os.Args[2], os.Args[3])
 	case "fixture", "match":
-		compareFixture(os.Args[2], os.Args[3])
+		side := 2048
+		if len(os.Args) > 4 {
+			var e error
+			side, e = strconv.Atoi(os.Args[4])
+			must(e)
+		}
+		compareFixture(os.Args[2], os.Args[3], side)
 	case "make":
 		makeColor("chroma.png", false)
 		makeColor("srgb.png", true)
@@ -876,7 +1116,7 @@ func main() {
 // Four area samples per output pixel give an independent box reference.
 // Every pixel is checked. Per-pixel bounds cover kernel ringing and lossy
 // coding, while tighter whole-image bounds reject accumulated distortion.
-func compareFixture(input, output string) {
+func compareFixture(input, output string, side int) {
 	inBytes, outBytes := read(input), read(output)
 	src, format, err := image.Decode(bytes.NewReader(inBytes))
 	must(err)
@@ -902,12 +1142,6 @@ func compareFixture(input, output string) {
 		longest = oh
 	}
 	scale := 1.0
-	side := 2048
-	if len(os.Args) > 4 {
-		var e error
-		side, e = strconv.Atoi(os.Args[4])
-		must(e)
-	}
 	if longest > side {
 		scale = float64(side) / float64(longest)
 	}
@@ -1587,4 +1821,133 @@ func referenceSample(src image.Image, x, y int) (uint32, uint32, uint32, uint32)
 	}
 	r, g, b := color.YCbCrToRGB(p.Y[p.YOffset(x, y)], byte(math.Round(cb)), byte(math.Round(cr)))
 	return uint32(r) * 257, uint32(g) * 257, uint32(b) * 257, 65535
+}
+
+func cleanupLoad(candidate string) {
+	// Exercise a real post-commit interval without a production hook: the
+	// worker leaves ordinary scratch entries for the adapter's normal cleanup.
+	// A separate observer publishes the marker only after decoding the new
+	// destination. If cleanup wins the race, signal fails rather than passing.
+	dir := filepath.Join(filepath.Dir(candidate), "cleanup-load")
+	must(os.Mkdir(dir, 0700))
+	for i := 0; i < 12000; i++ {
+		write(filepath.Join(dir, strconv.Itoa(i)), nil)
+	}
+}
+
+func published(input, output, marker string) {
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		b, e := os.ReadFile(output)
+		if e == nil && len(b) < len(read(input)) && !bytes.Contains(b, []byte(private)) {
+			compareFixture(input, output, 2048)
+			write(marker, []byte("completed output independently read before signal\n"))
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	panic("completed destination did not appear")
+}
+
+func repairStage(record string) {
+	dir := string(read(record))
+	rel, e := filepath.Rel(os.Getenv("WORK"), dir)
+	must(e)
+	if !filepath.IsLocal(rel) || !strings.HasPrefix(filepath.Base(dir), ".ncly-image-shrink-") {
+		panic("not a generated stage")
+	}
+	must(os.Chmod(dir, 0700))
+	must(os.RemoveAll(dir))
+}
+
+func jpegDeclarationsFixtures() {
+	// Each valid Adobe transform has a still-image acceptance control. Changing
+	// its declaration changes the reference's decoded pixels as well.
+	segment := func(marker byte, payload []byte) []byte {
+		b := []byte{255, marker}
+		b = binary.BigEndian.AppendUint16(b, uint16(len(payload)+2))
+		return append(b, payload...)
+	}
+	for _, model := range []string{"rgb", "cmyk"} {
+		source := "rgb444.jpg"
+		if model == "cmyk" {
+			source = "cmyk.jpg"
+		}
+		b := read(source)
+		var clean bytes.Buffer
+		clean.Write(b[:2])
+		for p := 2; p < len(b); {
+			k := b[p+1]
+			if k == 0xda {
+				clean.Write(b[p:])
+				break
+			}
+			n := int(binary.BigEndian.Uint16(b[p+2:]))
+			if k != 0xee {
+				clean.Write(b[p : p+2+n])
+			}
+			p += 2 + n
+		}
+		b = clean.Bytes()
+		transforms := []byte{0, 1}
+		if model == "cmyk" {
+			transforms = []byte{0, 2}
+		}
+		for _, t := range transforms {
+			d := []byte{'A', 'd', 'o', 'b', 'e', 0, 100, 0, 0, 0, 0, t}
+			write(fmt.Sprintf("adobe-%s-%d.jpg", model, t), append(append(append([]byte{}, b[:2]...), segment(0xee, d)...), b[2:]...))
+		}
+		for _, kind := range []string{"length", "duplicate", "value", "conflict"} {
+			d := []byte{'A', 'd', 'o', 'b', 'e', 0, 100, 0, 0, 0, 0, 0}
+			switch kind {
+			case "length":
+				d = append(d, []byte(private)...)
+			case "value":
+				d[11] = 3
+			case "conflict":
+				if model == "cmyk" {
+					d[11] = 1
+				} else {
+					d[11] = 2
+				}
+			}
+			extra := segment(0xee, d)
+			if kind == "duplicate" {
+				extra = append(extra, segment(0xee, d)...)
+			}
+			write(fmt.Sprintf("adobe-%s-%s.jpg", model, kind), append(append(append([]byte{}, b[:2]...), extra...), b[2:]...))
+		}
+	}
+	// APP0 has a fixed JFIF prefix and a size derived solely from its thumbnail.
+	b := read("orientation-1.jpg")
+	jfif := []byte{'J', 'F', 'I', 'F', 0, 1, 2, 0, 0, 1, 0, 1, 0, 0}
+	for _, kind := range []string{"valid", "length", "value"} {
+		d := bytes.Clone(jfif)
+		if kind == "length" {
+			d = append(d, []byte(private)...)
+		}
+		if kind == "value" {
+			d[7] = 3
+		}
+		write("jfif-"+kind+".jpg", append(append(append([]byte{}, b[:2]...), segment(0xe0, d)...), b[2:]...))
+	}
+}
+
+func corruptDisplay(input, output, kind string) {
+	b := read(input)
+	var out bytes.Buffer
+	out.Write(b[:8])
+	for p := 8; p < len(b); {
+		n := int(binary.BigEndian.Uint32(b[p:]))
+		k := string(b[p+4 : p+8])
+		data := b[p+8 : p+8+n]
+		if !(kind == "profile" && k == "iCCP") {
+			if kind == "gamma" && k == "gAMA" {
+				data = []byte{0, 0, 0xb1, 0x8f}
+			}
+			out.Write(chunk(k, data))
+		}
+		p += n + 12
+	}
+	write(output, out.Bytes())
 }
