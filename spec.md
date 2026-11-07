@@ -56,6 +56,8 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 | `alpha` | PNG and WebP retain transparency |
 | `profile` | The complete ICC color profile is retained |
 
+| `pixels` | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing |
+
 ## Case matrix
 
 | Family | Source | Accepted | Refused |
@@ -91,8 +93,4 @@ Tests generate all images. The real acceptance input is a generated PNG with col
 
 ## Open lines
 
-The final delta review found that the box-relative error bounds reject faithful odd-factor reductions. The complete-content promise stays unchanged.
-
-| ID | Command | Part | Case | Code |
-|---|---|---|---|---|
-| `pixels` | `ncly image shrink` | Acceptance | An independent decoder reads the complete output and matches the reference image, allowing bounded error for lossy formats and resizing | - |
+None. Round 4 selects the unchanged complete-content promise for odd, even and fractional kernel family checks.

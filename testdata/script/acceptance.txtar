@@ -5,6 +5,69 @@ exec go build -o bin/imageproof proof.go
 exec bin/imageproof make
 chmod 755 bin/vips
 
+# R1-F3: faithful odd/even/fractional kernels and valid corrupt-output pairs.
+# spec: pixels alpha orientation depth
+exec bin/imageproof frequency-fixture kernel-default.png 14336 128 1 16 alpha
+ncly image shrink kernel-default.png --json
+exec bin/imageproof match kernel-default.png kernel-default.shrunk.png
+exec bin/imageproof wrong-pixels kernel-default.shrunk.png kernel-default-bad.png transparent
+reads kernel-default.shrunk.png reference kernel-default-bad.png bin/imageproof match kernel-default.png '{}'
+exec bin/imageproof frequency-fixture kernel-odd.png 448 64 1 8 opaque
+ncly image shrink kernel-odd.png --max-side 64 --json
+exec bin/imageproof match kernel-odd.png kernel-odd.shrunk.png 64
+exec bin/imageproof wrong-pixels kernel-odd.shrunk.png kernel-odd-bad.png black
+reads kernel-odd.shrunk.png reference kernel-odd-bad.png bin/imageproof match kernel-odd.png '{}' 64
+exec bin/imageproof frequency-fixture kernel-even6.png 384 64 1 16 alpha
+ncly image shrink kernel-even6.png --max-side 64 --json
+exec bin/imageproof match kernel-even6.png kernel-even6.shrunk.png 64
+exec bin/imageproof wrong-pixels kernel-even6.shrunk.png kernel-even6-bad.png transparent
+reads kernel-even6.shrunk.png reference kernel-even6-bad.png bin/imageproof match kernel-even6.png '{}' 64
+exec bin/imageproof frequency-fixture kernel-even8.png 512 64 1 8 alpha
+ncly image shrink kernel-even8.png --max-side 64 --json
+exec bin/imageproof match kernel-even8.png kernel-even8.shrunk.png 64
+exec bin/imageproof wrong-pixels kernel-even8.shrunk.png kernel-even8-bad.png transparent
+reads kernel-even8.shrunk.png reference kernel-even8-bad.png bin/imageproof match kernel-even8.png '{}' 64
+exec bin/imageproof frequency-fixture kernel-turn-1.png 133 67 1 8 alpha
+ncly image shrink kernel-turn-1.png --max-side 19 --json
+exec bin/imageproof match kernel-turn-1.png kernel-turn-1.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-turn-1.shrunk.png kernel-turn-1-bad.png transparent
+reads kernel-turn-1.shrunk.png reference kernel-turn-1-bad.png bin/imageproof match kernel-turn-1.png '{}' 19
+exec bin/imageproof frequency-fixture kernel-turn-2.png 133 67 2 16 alpha
+ncly image shrink kernel-turn-2.png --max-side 19 --json
+exec bin/imageproof match kernel-turn-2.png kernel-turn-2.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-turn-2.shrunk.png kernel-turn-2-bad.png transparent
+reads kernel-turn-2.shrunk.png reference kernel-turn-2-bad.png bin/imageproof match kernel-turn-2.png '{}' 19
+exec bin/imageproof frequency-fixture kernel-turn-3.png 133 67 3 8 alpha
+ncly image shrink kernel-turn-3.png --max-side 19 --json
+exec bin/imageproof match kernel-turn-3.png kernel-turn-3.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-turn-3.shrunk.png kernel-turn-3-bad.png transparent
+reads kernel-turn-3.shrunk.png reference kernel-turn-3-bad.png bin/imageproof match kernel-turn-3.png '{}' 19
+exec bin/imageproof frequency-fixture kernel-turn-4.png 133 67 4 16 alpha
+ncly image shrink kernel-turn-4.png --max-side 19 --json
+exec bin/imageproof match kernel-turn-4.png kernel-turn-4.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-turn-4.shrunk.png kernel-turn-4-bad.png transparent
+reads kernel-turn-4.shrunk.png reference kernel-turn-4-bad.png bin/imageproof match kernel-turn-4.png '{}' 19
+exec bin/imageproof frequency-fixture kernel-turn-5.png 133 67 5 8 alpha
+ncly image shrink kernel-turn-5.png --max-side 19 --json
+exec bin/imageproof match kernel-turn-5.png kernel-turn-5.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-turn-5.shrunk.png kernel-turn-5-bad.png transparent
+reads kernel-turn-5.shrunk.png reference kernel-turn-5-bad.png bin/imageproof match kernel-turn-5.png '{}' 19
+exec bin/imageproof frequency-fixture kernel-turn-6.png 133 67 6 16 alpha
+ncly image shrink kernel-turn-6.png --max-side 19 --json
+exec bin/imageproof match kernel-turn-6.png kernel-turn-6.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-turn-6.shrunk.png kernel-turn-6-bad.png transparent
+reads kernel-turn-6.shrunk.png reference kernel-turn-6-bad.png bin/imageproof match kernel-turn-6.png '{}' 19
+exec bin/imageproof frequency-fixture kernel-turn-7.png 133 67 7 8 alpha
+ncly image shrink kernel-turn-7.png --max-side 19 --json
+exec bin/imageproof match kernel-turn-7.png kernel-turn-7.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-turn-7.shrunk.png kernel-turn-7-bad.png transparent
+reads kernel-turn-7.shrunk.png reference kernel-turn-7-bad.png bin/imageproof match kernel-turn-7.png '{}' 19
+exec bin/imageproof frequency-fixture kernel-turn-8.png 133 67 8 16 alpha
+ncly image shrink kernel-turn-8.png --max-side 19 --json
+exec bin/imageproof match kernel-turn-8.png kernel-turn-8.shrunk.png 19
+exec bin/imageproof wrong-pixels kernel-turn-8.shrunk.png kernel-turn-8-bad.png transparent
+reads kernel-turn-8.shrunk.png reference kernel-turn-8-bad.png bin/imageproof match kernel-turn-8.png '{}' 19
+
 # spec: preview smaller format pixels privacy profile png-color alpha quality publication staging
 symlink photo.shrunk.png.tmp -> photo.png
 protect photo.png photo.shrunk.png.tmp
