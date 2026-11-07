@@ -67,7 +67,13 @@ func preparePNG(p *prepared) ([]byte, error) {
 	// The Go PNG encoder expands Gray-alpha to RGBA. Keep Gray samples in
 	// their original model so the retained GRAY ICC remains compatible.
 	if p.data[25] == 0 || p.data[25] == 4 {
-		err = encodeGrayPNG(&encoded, input, p.data[24], p.data[25] == 4)
+		alpha := p.data[25] == 4
+		// Type-0 Gray may declare a transparent sample through tRNS. The
+		// decoder exposes its alpha even though the original type is not 4.
+		if opaque, ok := input.(interface{ Opaque() bool }); ok && !opaque.Opaque() {
+			alpha = true
+		}
+		err = encodeGrayPNG(&encoded, input, p.data[24], alpha)
 	} else {
 		err = png.Encode(&encoded, input)
 	}
