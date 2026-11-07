@@ -1,0 +1,31 @@
+# The first public-boundary scenario. The template inspector must not claim
+# that a PNG is a prepared sharing copy. The test generates its own image.
+exec go run make.go
+
+# spec: preview
+ncly image shrink photo.png --dry-run --json
+stdout '"output":.*photo[.]shrunk[.]png'
+! exists photo.shrunk.png
+
+-- make.go --
+package main
+
+import (
+    "image"
+    "image/color"
+    "image/png"
+    "os"
+)
+
+func main() {
+    img := image.NewNRGBA(image.Rect(0, 0, 64, 32))
+    for y := 0; y < 32; y++ {
+        for x := 0; x < 64; x++ {
+            img.SetNRGBA(x, y, color.NRGBA{R: 210, G: 40, B: 20, A: 255})
+        }
+    }
+    file, err := os.Create("photo.png")
+    if err != nil { panic(err) }
+    if err := png.Encode(file, img); err != nil { panic(err) }
+    if err := file.Close(); err != nil { panic(err) }
+}
