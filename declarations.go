@@ -11,6 +11,7 @@ func pngDeclarations(chunks []chunk) error {
 	seen := map[string][]byte{}
 	afterPixels := false
 	afterPalette := false
+	paletteEntries, transparencySeen := 0, false
 	if len(chunks) == 0 || chunks[0].kind != "IHDR" || len(chunks[0].data) != 13 {
 		return errImage
 	}
@@ -21,6 +22,36 @@ func pngDeclarations(chunks []chunk) error {
 		}
 		if c.kind == "PLTE" {
 			afterPalette = true
+			paletteEntries = len(c.data) / 3
+		}
+		if c.kind == "tRNS" {
+			if transparencySeen || afterPixels {
+				return errImage
+			}
+			transparencySeen = true
+			maxSample := uint32(1)<<depth - 1
+			switch model {
+			case 0:
+				if len(c.data) != 2 || uint32(binary.BigEndian.Uint16(c.data)) > maxSample {
+					return errImage
+				}
+			case 2:
+				if len(c.data) != 6 {
+					return errImage
+				}
+				for at := 0; at < 6; at += 2 {
+					if uint32(binary.BigEndian.Uint16(c.data[at:])) > maxSample {
+						return errImage
+					}
+				}
+			case 3:
+				if !afterPalette || len(c.data) == 0 || len(c.data) > paletteEntries {
+					return errImage
+				}
+			default:
+				return errImage
+			}
+			continue
 		}
 		switch c.kind {
 		case "gAMA", "cHRM", "sRGB", "cICP", "iCCP", "sBIT", "eXIf":

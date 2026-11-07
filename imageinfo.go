@@ -17,6 +17,7 @@ type metadata struct {
 	orientation uint16
 	colors      []chunk
 	model       string
+	iccPresent  bool
 }
 
 type chunk struct {
@@ -49,9 +50,10 @@ func inspectImage(data []byte, format string) (metadata, error) {
 				meta.orientation, err = orientation(c.data)
 			case "iCCP":
 				at := bytes.IndexByte(c.data, 0)
-				if at < 1 || at+2 >= len(c.data) || c.data[at+1] != 0 || meta.icc != nil {
+				if at < 1 || at > 79 || at+2 >= len(c.data) || c.data[at+1] != 0 || meta.iccPresent {
 					return meta, errImage
 				}
+				meta.iccPresent = true
 				reader, openErr := zlib.NewReader(bytes.NewReader(c.data[at+2:]))
 				if openErr != nil {
 					return meta, errImage
@@ -90,7 +92,11 @@ func inspectImage(data []byte, format string) (metadata, error) {
 				return meta, err
 			}
 			if c.kind == "\xe2" && bytes.HasPrefix(c.data, []byte("ICC_PROFILE\x00")) {
-				if len(c.data) < 14 || c.data[12] < 1 || c.data[13] < c.data[12] || profiles[c.data[12]] != nil || total != 0 && total != c.data[13] {
+				meta.iccPresent = true
+				if len(c.data) < 14 || c.data[12] < 1 || c.data[13] < c.data[12] || total != 0 && total != c.data[13] {
+					return meta, errImage
+				}
+				if _, duplicate := profiles[c.data[12]]; duplicate {
 					return meta, errImage
 				}
 				total = c.data[13]
@@ -98,7 +104,7 @@ func inspectImage(data []byte, format string) (metadata, error) {
 			}
 		}
 		for n := 1; n <= int(total); n++ {
-			if profiles[byte(n)] == nil {
+			if _, present := profiles[byte(n)]; !present {
 				return meta, errImage
 			}
 			meta.icc = append(meta.icc, profiles[byte(n)]...)
@@ -109,14 +115,16 @@ func inspectImage(data []byte, format string) (metadata, error) {
 		if err != nil {
 			return meta, err
 		}
+		extended, profileFlag := false, false
 		for _, c := range chunks {
 			switch c.kind {
 			case "ANIM", "ANMF":
 				return meta, errMultipart
 			case "VP8X":
-				if len(c.data) != 10 {
+				if len(c.data) != 10 || extended {
 					return meta, errImage
 				}
+				extended, profileFlag = true, c.data[0]&0x20 != 0
 				if c.data[0]&2 != 0 {
 					return meta, errMultipart
 				}
@@ -124,19 +132,23 @@ func inspectImage(data []byte, format string) (metadata, error) {
 				exif := bytes.TrimPrefix(c.data, []byte("Exif\x00\x00"))
 				meta.orientation, err = orientation(exif)
 			case "ICCP":
-				if meta.icc != nil {
+				if meta.iccPresent {
 					return meta, errImage
 				}
+				meta.iccPresent = true
 				meta.icc = c.data
 			}
 			if err != nil {
 				return meta, err
 			}
 		}
+		if meta.iccPresent && !extended || profileFlag != meta.iccPresent {
+			return meta, errImage
+		}
 	default:
 		return meta, errImage
 	}
-	if len(meta.icc) > 0 && !profileMatches(meta.icc, meta.model) {
+	if meta.iccPresent && !profileMatches(meta.icc, meta.model) {
 		return meta, errImage
 	}
 	return meta, nil

@@ -277,7 +277,7 @@ func validCandidate(data []byte, p *prepared) bool {
 		return false
 	}
 	meta, err := inspectImage(data, p.format)
-	if err != nil || !bytes.Equal(meta.icc, p.meta.icc) {
+	if err != nil || meta.iccPresent != p.meta.iccPresent || !bytes.Equal(meta.icc, p.meta.icc) {
 		return false
 	}
 	config, format, err := image.DecodeConfig(bytes.NewReader(data))
